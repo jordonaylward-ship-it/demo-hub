@@ -818,11 +818,11 @@ function historyChartsBlock(leads){
     return'&lt;div class=&quot;hist-chart&quot;&gt;&lt;div class=&quot;hist-title&quot;&gt;'+title+(badge?' &lt;span class=&quot;hist-badge&quot;&gt;'+badge+'&lt;/span&gt;':'')+'&lt;/div&gt;&lt;svg viewBox=&quot;0 0 '+w+' '+h+'&quot; preserveAspectRatio=&quot;none&quot; style=&quot;width:100%;height:200px&quot;&gt;'+baseline+yTicks+area+line+dots+xTicks+'&lt;/svg&gt;&lt;/div&gt;';
   }
 
-  return'&lt;div class=&quot;sh&quot; style=&quot;margin-top:20px;padding:18px 16px 8px&quot;&gt;&lt;h2 style=&quot;font-size:16px;margin-bottom:4px&quot;&gt;History&lt;/h2&gt;&lt;span class=&quot;badge&quot; style=&quot;font-size:10px&quot;&gt;WEEKLY · FIRST LEAD TO NOW&lt;/span&gt;'
-    +'&lt;div style=&quot;display:flex;flex-direction:column;gap:16px;margin-top:14px&quot;&gt;'
+  return'&lt;div class=&quot;sh&quot; style=&quot;margin-top:20px&quot;&gt;&lt;h2&gt;History&lt;/h2&gt;&lt;span class=&quot;badge&quot;&gt;WEEKLY · FIRST LEAD TO NOW&lt;/span&gt;&lt;/div&gt;'
+    +'&lt;div style=&quot;display:flex;flex-direction:column;gap:16px;margin-top:8px;margin-bottom:20px&quot;&gt;'
     +lineChart(settleData,'Settlements per week',totalSettled+' total','var(--pos)',v=&gt;Math.round(v).toString())
     +lineChart(incomeData,'Take-home commission per week (after 70% split)','$'+Math.round(totalIncome).toLocaleString()+' total','var(--teal)',v=&gt;Math.abs(v)&gt;=1000?'$'+(v/1000).toFixed(1)+'k':'$'+Math.round(v))
-    +'&lt;/div&gt;&lt;/div&gt;';
+    +'&lt;/div&gt;';
 }
 
 function statsCards(s,label){
