@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FundOne Demo Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0e14;--card:#151821;--card2:#1a1e2a;--bdr:#252a38;--bdr2:#333a4d;--txt:#e8eaf0;--dim:#8a90a5;--mut:#5a6075;--blue:#4e8cff;--green:#2dd4a0;--red:#f06060;--amber:#f0b040;--purple:#a78bfa;--cyan:#20d0e8;--teal:#14b8a6}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;line-height:1.5}
+.app{max-width:1440px;margin:0 auto;padding:24px 20px}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--bdr);flex-wrap:wrap;gap:12px}
+.hdr h1{font-size:24px;font-weight:700}.hdr h1 span{color:var(--teal)}
+.hdr p{font-size:13px;color:var(--dim);margin-top:2px}
+.hdr-r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;display:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.live-txt{font-size:12px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.tabs{display:flex;gap:4px;margin-bottom:24px;overflow-x:auto;padding-bottom:4px}
+.tab{padding:9px 20px;border:1px solid var(--bdr);background:transparent;color:var(--dim);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;border-radius:8px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.tab:hover{background:var(--card);color:var(--txt)}.tab.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn{padding:9px 18px;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-p{background:var(--teal);color:#fff}.btn-p:hover{opacity:.85}
+.btn-s{background:transparent;border:1px solid var(--bdr);color:var(--dim)}.btn-s:hover{background:var(--card);color:var(--txt)}
+.btn-sm{font-size:12px;padding:6px 12px}
+.mg{display:grid;gap:14px;margin-bottom:24px}
+.mg5{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.mg4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.mg3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.mg2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.mc{background:var(--card);border:1px solid var(--bdr);border-radius:12px;padding:16px;transition:all .2s}
+.mc:hover{border-color:var(--bdr2);background:var(--card2)}
+.mc-l{font-size:10px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.mc-v{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600}
+.mc-s{font-size:11px;color:var(--mut);margin-top:3px}
+.tw{background:var(--card);border:1px solid var(--bdr);border-radius:12px;overflow:hidden}
+.ts{overflow-x:auto;max-height:65vh;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#10131b;padding:10px 12px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);white-space:nowrap;border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:1}
+tbody td{padding:10px 12px;border-bottom:1px solid rgba(37,42,56,.6);white-space:nowrap}
+tbody tr:hover{background:var(--card2)}
+.cm{font-family:'JetBrains Mono',monospace;font-size:12px}
+.trow td{font-weight:700!important;background:#10131b!important;border-top:2px solid var(--teal)!important}
+.sec{display:none}.sec.on{display:block}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.sh h2{font-size:17px;font-weight:600}
+.badge{font-size:11px;font-family:'JetBrains Mono',monospace;padding:4px 10px;border-radius:20px;background:rgba(20,184,166,.15);color:var(--teal)}
+.c-pos{color:var(--green)}.c-neg{color:var(--red)}.c-warn{color:var(--amber)}.c-neut{color:var(--txt)}.c-dim{color:var(--dim)}.c-teal{color:var(--teal)}
+.err-msg{background:rgba(240,96,96,.08);border:1px solid rgba(240,96,96,.3);border-radius:10px;padding:16px;color:var(--red);font-size:13px;margin-bottom:20px}
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--dim);font-size:14px}
+.loading::before{content:"";width:20px;height:20px;border:2px solid var(--bdr);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite;margin-right:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.foot{margin-top:40px;padding-top:18px;border-top:1px solid rgba(37,42,56,.4);text-align:center;color:var(--mut);font-size:12px}
+.foot a{color:var(--teal);text-decoration:none}
+.insight{background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(240,176,64,.04));border:1px solid rgba(251,191,36,.35);border-left:3px solid var(--amber);border-radius:10px;padding:16px 20px;margin-top:20px;display:flex;gap:14px;align-items:flex-start}
+.insight-icon{font-size:20px;flex-shrink:0}
+.insight-body{flex:1}
+.insight-label{font-size:10px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.insight-text{font-size:14px;color:var(--txt);line-height:1.55}
+.quote{background:linear-gradient(135deg,rgba(20,184,166,.08),rgba(78,140,255,.04));border:1px solid rgba(20,184,166,.3);border-left:3px solid var(--teal);border-radius:10px;padding:16px 20px;margin-top:12px;display:flex;gap:14px;align-items:flex-start}
+.quote-icon{font-size:20px;flex-shrink:0;color:var(--teal)}
+.quote-body{flex:1}
+.quote-label{font-size:10px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.quote-text{font-size:14px;color:var(--txt);line-height:1.55;font-style:italic}
+.filter-bar{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;align-items:center;padding:12px 16px;background:var(--card);border:1px solid var(--bdr);border-radius:12px}
+.filter-bar-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-right:6px}
+.filter-btn{padding:7px 16px;border:1px solid var(--bdr2);background:transparent;color:var(--dim);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;border-radius:20px;cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.filter-btn:hover{background:var(--card2);color:var(--txt)}
+.filter-btn.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.filter-btn .count{opacity:.7;font-weight:400;margin-left:4px}
+.setup{background:linear-gradient(135deg,rgba(78,140,255,.08),rgba(20,184,166,.08));border:1px solid var(--teal);border-radius:14px;padding:24px;margin-bottom:24px}
+.setup h2{font-size:17px;margin-bottom:6px;color:var(--teal)}.setup p{font-size:13px;color:var(--dim);margin-bottom:14px}
+.setup-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.setup input{flex:1;min-width:250px;border-radius:8px;border:1px solid var(--bdr2);background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospace;font-size:12px;padding:10px 14px;outline:none}
+@media(max-width:768px){.app{padding:14px 12px}.mg5,.mg4{grid-template-columns:1fr 1fr}.mc-v{font-size:17px}}
+</style>
+
+<style>
+.demo-badge {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, #f0a500, #e6a574);
+  color: #1a1a1a;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+  font-family: 'DM Sans', sans-serif;
+}
+</style>
+</head>
+<body><div class="demo-badge">📊 DEMO MODE</div>
+<div class="app">
+  <div class="setup" id="setupBox" style="display:none !important" style="display:none">
+    <h2>FundOne Dashboard Demo</h2><p>Sample data — no setup required</p>
+    <div class="setup-row"><input type="text" id="urlInput" placeholder="https://script.google.com/macros/s/.../exec"><button class="btn btn-p" onclick="connect()">Connect</button></div>
+  </div>
+  <div class="hdr">
+    <div><h1>FUND <span>ONE</span></h1><p>Fund One — Demo Dashboard — Sample Data</p></div>
+    <div class="hdr-r">
+      <div class="live-dot" id="liveDot"></div><span class="live-txt" id="liveTxt"></span>
+      <button class="btn btn-s btn-sm" onclick="refreshData()">↻ Refresh</button>
+      <button class="btn btn-p btn-sm" onclick="exportXLSX()">Export</button>
+      <button class="btn btn-s btn-sm" onclick="toggleSetup()">⚙</button>
+    </div>
+  </div>
+  <div id="errMsg"></div>
+  <div class="tabs" id="tabs"></div>
+  <div class="sec on" id="sec-alltime"><div class="loading" id="loadMsg">Loading...</div></div>
+  <div class="sec" id="sec-monthly"></div>
+  <div class="sec" id="sec-fundone"></div>
+  <div class="sec" id="sec-losses"></div>
+  <div class="sec" id="sec-leads"></div>
+</div>
+<div class="foot">Broker HUB — Demo data · Showcase preview </div>
+<script>
+let SCRIPT_URL=localStorage.getItem("broker-script-url")||"https://script.google.com/macros/s/AKfycbza_HzauQ02hFJFB0ZwTqMQ3C6AlMQ9rd5y7ToLAwNXQZAxcmimv2xXizsU5J_JxDGndA/exec";
+let refreshTimer=null,activeTab="alltime",D=null;
+const TABS=[{k:"alltime",l:"All Time"},{k:"monthly",l:"Monthly"},{k:"fundone",l:"FundOne Balance"},{k:"losses",l:"Loss Reasons"},{k:"leads",l:"Leads Log"}];
+
+// FundOne RCTI ledger — add a new entry each month after the RCTI arrives
+// "net" = income - costs - gstAdj for that month (the change to your running balance)
+const FUNDONE_LEDGER={
+  openingBalance:-4153.34,  // balance carried in before March (sum of pre-March advances/negatives)
+  months:[
+    
+  ]
+};
+
+// === DEMO MODE — hardcoded fake data ===
+const DEMO_LEADS = [{"Lead ID":"L-0001","Lead Received Date":"26/2/2026","Business / Lead Name":"Felix Hayward","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Social Media","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 Nissan Navara","Requested Amount":55000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Asset age outside lender policy","Lost Date":"11/3/2026","Current Stage":"Closed - Declined","Lender":"Branded Financial","Credit Decision Date":"11/3/2026"},{"Lead ID":"L-0002","Lead Received Date":"28/2/2026","Business / Lead Name":"Henry Taylor","Lead Type":"MQL","Lead Cost Individually":39.99,"Lead Source":"Referral Partner","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":38000,"Qualification Status":"Not Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Stopped responding","Lost Date":"7/3/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0003","Lead Received Date":"13/2/2026","Business / Lead Name":"Cooper Roberts","Lead Type":"Live","Lead Cost Individually":149.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Jeep Grand Cherokee","Requested Amount":52000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"3. Chasing Documents","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0004","Lead Received Date":"6/2/2026","Business / Lead Name":"Caleb Roberts","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Ford Everest","Requested Amount":55000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"2/3/2026","Settled Amount":53799,"Commission Total":2141.2,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Metro Finance","Credit Decision Date":"28/2/2026"},{"Lead ID":"L-0005","Lead Received Date":"8/2/2026","Business / Lead Name":"Stella Singh","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Social Media","Product Type":"Vehicle Finance","Vehicle / Asset":"2021 Skoda Karoq","Requested Amount":22000,"Qualification Status":"Not Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Stopped responding","Lost Date":"23/2/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0006","Lead Received Date":"13/2/2026","Business / Lead Name":"Bianca Davies","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Mazda BT-50","Requested Amount":28500,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"9/3/2026","Settled Amount":27652,"Commission Total":1145.41,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"FirstMac","Credit Decision Date":"3/3/2026"},{"Lead ID":"L-0007","Lead Received Date":"13/2/2026","Business / Lead Name":"Ethan Russo","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Broker Network","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":22000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"3. Chasing Documents","Lender":"Liberty","Credit Decision Date":""},{"Lead ID":"L-0008","Lead Received Date":"26/2/2026","Business / Lead Name":"Isla Patel","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Referral Partner","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":65000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"11. Loan Documents","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0009","Lead Received Date":"1/2/2026","Business / Lead Name":"Chloe Marchetti","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Referral Partner","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 BMW X3","Requested Amount":48000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"ABN trading history insufficient","Lost Date":"6/2/2026","Current Stage":"Closed - Declined","Lender":"Money3","Credit Decision Date":"6/2/2026"},{"Lead ID":"L-0010","Lead Received Date":"24/2/2026","Business / Lead Name":"Sarah Russo","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 Nissan Navara","Requested Amount":80000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"19/3/2026","Settled Amount":81988,"Commission Total":2227.75,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Latitude","Credit Decision Date":"16/3/2026"},{"Lead ID":"L-0011","Lead Received Date":"18/2/2026","Business / Lead Name":"Charlotte Halloran","Lead Type":"Live","Lead Cost Individually":149.99,"Lead Source":"Broker Network","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 BYD Atto 3","Requested Amount":72000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"7. Application Submitted","Lender":"Finance One","Credit Decision Date":""},{"Lead ID":"L-0012","Lead Received Date":"19/2/2026","Business / Lead Name":"Sophia Romano","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2021 Mercedes GLA","Requested Amount":28500,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"15/3/2026","Settled Amount":26852,"Commission Total":775.79,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Metro Finance","Credit Decision Date":"9/3/2026"},{"Lead ID":"L-0013","Lead Received Date":"14/2/2026","Business / Lead Name":"Zoe McKenzie","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Social Media","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":52000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"10. Final Bits","Lender":"Finance One","Credit Decision Date":""},{"Lead ID":"L-0014","Lead Received Date":"3/2/2026","Business / Lead Name":"Owen Whitmore","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 LDV T60","Requested Amount":15000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Stopped responding","Lost Date":"9/2/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0015","Lead Received Date":"2/2/2026","Business / Lead Name":"Isla Russo","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Repeat Client","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":42000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Living expenses inconsistent with bank statements","Lost Date":"8/2/2026","Current Stage":"Closed - Declined","Lender":"Liberty","Credit Decision Date":"8/2/2026"},{"Lead ID":"L-0016","Lead Received Date":"24/2/2026","Business / Lead Name":"Tahlia Evans","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Broker Network","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Hyundai i30","Requested Amount":60000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"9. Conditional Approval","Lender":"FirstMac","Credit Decision Date":""},{"Lead ID":"L-0017","Lead Received Date":"15/2/2026","Business / Lead Name":"Mia Marchetti","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Direct Website","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":18500,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Client went elsewhere","Lost Date":"2/3/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0018","Lead Received Date":"7/2/2026","Business / Lead Name":"Ethan Tran","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Google Ads","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":42000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"3. Chasing Documents","Lender":"Metro Finance","Credit Decision Date":""},{"Lead ID":"L-0019","Lead Received Date":"28/2/2026","Business / Lead Name":"Liam Rutherford","Lead Type":"MQL","Lead Cost Individually":39.99,"Lead Source":"Google Ads","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":22000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"4. Reviewing Your File","Lender":"Macquarie","Credit Decision Date":""},{"Lead ID":"L-0020","Lead Received Date":"7/2/2026","Business / Lead Name":"Mia Roberts","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Referral Partner","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":15000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"10. Final Bits","Lender":"Azora","Credit Decision Date":""},{"Lead ID":"L-0021","Lead Received Date":"24/2/2026","Business / Lead Name":"Maya Davies","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Broker Network","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 Isuzu D-MAX","Requested Amount":45000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Living expenses inconsistent with bank statements","Lost Date":"10/3/2026","Current Stage":"Closed - Declined","Lender":"Money3","Credit Decision Date":"10/3/2026"},{"Lead ID":"L-0022","Lead Received Date":"24/2/2026","Business / Lead Name":"Liam Whitmore","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Social Media","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":80000,"Qualification Status":"Not Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Client went elsewhere","Lost Date":"6/3/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0023","Lead Received Date":"3/2/2026","Business / Lead Name":"Isla Halloran","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Broker Network","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":38000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Lost interest","Lost Date":"15/2/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0024","Lead Received Date":"20/2/2026","Business / Lead Name":"Tyler Turner","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Referral Partner","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Tesla Model 3","Requested Amount":48000,"Qualification Status":"Not Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Changed mind","Lost Date":"1/3/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0025","Lead Received Date":"15/2/2026","Business / Lead Name":"Noah Smith","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Social Media","Product Type":"Vehicle Finance","Vehicle / Asset":"2021 Volkswagen Tiguan","Requested Amount":25000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"11. Loan Documents","Lender":"Branded Financial","Credit Decision Date":""},{"Lead ID":"L-0026","Lead Received Date":"12/2/2026","Business / Lead Name":"Hannah Foster","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Social Media","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":32000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"7. Application Submitted","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0027","Lead Received Date":"26/2/2026","Business / Lead Name":"Charlotte Beauchamp","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Referral Partner","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Hyundai i30","Requested Amount":25000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"8/3/2026","Settled Amount":28081,"Commission Total":1021.69,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Now Finance","Credit Decision Date":"4/3/2026"},{"Lead ID":"L-0028","Lead Received Date":"20/2/2026","Business / Lead Name":"Brandon Carter","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Referral Partner","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":80000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Recent payday loan activity","Lost Date":"23/2/2026","Current Stage":"Closed - Declined","Lender":"Angle Finance","Credit Decision Date":"23/2/2026"},{"Lead ID":"L-0029","Lead Received Date":"14/2/2026","Business / Lead Name":"Amelia Smith","Lead Type":"Live","Lead Cost Individually":149.99,"Lead Source":"Referral Partner","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":28500,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"ABN trading history insufficient","Lost Date":"19/2/2026","Current Stage":"Closed - Declined","Lender":"Westpac","Credit Decision Date":"19/2/2026"},{"Lead ID":"L-0030","Lead Received Date":"23/2/2026","Business / Lead Name":"James Martin","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Broker Network","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":28500,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"13/3/2026","Settled Amount":30271,"Commission Total":1100.82,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"FirstMac","Credit Decision Date":"10/3/2026"},{"Lead ID":"L-0031","Lead Received Date":"2/2/2026","Business / Lead Name":"Daniel Henderson","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Broker Network","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":38000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"8. Lender Reviewing","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0032","Lead Received Date":"28/2/2026","Business / Lead Name":"Jacob Evans","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Broker Network","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":32000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"4. Reviewing Your File","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0033","Lead Received Date":"11/2/2026","Business / Lead Name":"Aria Beauchamp","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Hyundai i30","Requested Amount":42000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"9. Conditional Approval","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0034","Lead Received Date":"28/2/2026","Business / Lead Name":"Henry Wang","Lead Type":"Live","Lead Cost Individually":149.99,"Lead Source":"Google Ads","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":45000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"14/3/2026","Settled Amount":42193,"Commission Total":1652.31,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"FirstMac","Credit Decision Date":"10/3/2026"},{"Lead ID":"L-0035","Lead Received Date":"9/2/2026","Business / Lead Name":"Emily Henderson","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Broker Network","Product Type":"Vehicle Finance","Vehicle / Asset":"2021 Skoda Karoq","Requested Amount":48000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"7. Application Submitted","Lender":"Now Finance","Credit Decision Date":""},{"Lead ID":"L-0036","Lead Received Date":"2/2/2026","Business / Lead Name":"Patrick Henderson","Lead Type":"Live","Lead Cost Individually":149.99,"Lead Source":"Social Media","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":60000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"12/2/2026","Settled Amount":60155,"Commission Total":2730.26,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Finance One","Credit Decision Date":"8/2/2026"},{"Lead ID":"L-0037","Lead Received Date":"2/2/2026","Business / Lead Name":"Charlotte Bennett","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Broker Network","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":52000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"8. Lender Reviewing","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0038","Lead Received Date":"22/2/2026","Business / Lead Name":"Lara Russo","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Repeat Client","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Ford Everest","Requested Amount":60000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"10/3/2026","Settled Amount":61541,"Commission Total":1557.57,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"FirstMac","Credit Decision Date":"3/3/2026"},{"Lead ID":"L-0039","Lead Received Date":"13/2/2026","Business / Lead Name":"Ava Pemberton","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Broker Network","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":55000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"1/3/2026","Settled Amount":54350,"Commission Total":1492.71,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Morris Finance","Credit Decision Date":"23/2/2026"},{"Lead ID":"L-0040","Lead Received Date":"20/2/2026","Business / Lead Name":"Bianca Chen","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Repeat Client","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":35000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Income to debt ratio outside policy","Lost Date":"6/3/2026","Current Stage":"Closed - Declined","Lender":"Angle Finance","Credit Decision Date":"6/3/2026"},{"Lead ID":"L-0041","Lead Received Date":"3/2/2026","Business / Lead Name":"Brandon Anderson","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Google Ads","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Mitsubishi Outlander","Requested Amount":45000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Insufficient credit history","Lost Date":"6/2/2026","Current Stage":"Closed - Declined","Lender":"Finance One","Credit Decision Date":"6/2/2026"},{"Lead ID":"L-0042","Lead Received Date":"16/2/2026","Business / Lead Name":"Noah Wang","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Direct Website","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":35000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"ABN trading history insufficient","Lost Date":"25/2/2026","Current Stage":"Closed - Declined","Lender":"FirstMac","Credit Decision Date":"25/2/2026"},{"Lead ID":"L-0043","Lead Received Date":"8/2/2026","Business / Lead Name":"James Thompson","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Lexus NX","Requested Amount":38000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"1/3/2026","Settled Amount":35411,"Commission Total":1292.24,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Branded Financial","Credit Decision Date":"27/2/2026"},{"Lead ID":"L-0044","Lead Received Date":"18/3/2026","Business / Lead Name":"Liam Carter","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Social Media","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":55000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"25/3/2026","Settled Amount":59018,"Commission Total":2649.74,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Plenti","Credit Decision Date":"20/3/2026"},{"Lead ID":"L-0045","Lead Received Date":"16/3/2026","Business / Lead Name":"Jordan McKenzie","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Direct Website","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":60000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Living expenses inconsistent with bank statements","Lost Date":"30/3/2026","Current Stage":"Closed - Declined","Lender":"Morris Finance","Credit Decision Date":"30/3/2026"},{"Lead ID":"L-0046","Lead Received Date":"20/3/2026","Business / Lead Name":"Maya Phillips","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Broker Network","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":60000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"8/4/2026","Settled Amount":59753,"Commission Total":2353.71,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Morris Finance","Credit Decision Date":"3/4/2026"},{"Lead ID":"L-0047","Lead Received Date":"24/3/2026","Business / Lead Name":"Felix Walker","Lead Type":"MQL","Lead Cost Individually":39.99,"Lead Source":"Social Media","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":55000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Insufficient credit history","Lost Date":"6/4/2026","Current Stage":"Closed - Declined","Lender":"Pepper Money","Credit Decision Date":"6/4/2026"},{"Lead ID":"L-0048","Lead Received Date":"21/3/2026","Business / Lead Name":"Felix Mitchell","Lead Type":"MQL","Lead Cost Individually":39.99,"Lead Source":"Referral Partner","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":42000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"3/4/2026","Settled Amount":42724,"Commission Total":1303.0,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Morris Finance","Credit Decision Date":"29/3/2026"},{"Lead ID":"L-0049","Lead Received Date":"9/3/2026","Business / Lead Name":"Aria Turner","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Mazda BT-50","Requested Amount":72000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"17/3/2026","Settled Amount":76798,"Commission Total":2388.34,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Angle Finance","Credit Decision Date":"15/3/2026"},{"Lead ID":"L-0050","Lead Received Date":"25/3/2026","Business / Lead Name":"Amelia Johnson","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Broker Network","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":35000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Income to debt ratio outside policy","Lost Date":"6/4/2026","Current Stage":"Closed - Declined","Lender":"Finance One","Credit Decision Date":"6/4/2026"},{"Lead ID":"L-0051","Lead Received Date":"5/3/2026","Business / Lead Name":"Lucas Ashford","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Referral Partner","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":65000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"8. Lender Reviewing","Lender":"Plenti","Credit Decision Date":""},{"Lead ID":"L-0052","Lead Received Date":"31/3/2026","Business / Lead Name":"Chloe Roberts","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Broker Network","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":25000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"16/4/2026","Settled Amount":26716,"Commission Total":1058.25,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"FirstMac","Credit Decision Date":"11/4/2026"},{"Lead ID":"L-0053","Lead Received Date":"31/3/2026","Business / Lead Name":"Isla Whitmore","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Referral Partner","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":25000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"10/4/2026","Settled Amount":28522,"Commission Total":1357.08,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Morris Finance","Credit Decision Date":"8/4/2026"},{"Lead ID":"L-0054","Lead Received Date":"12/3/2026","Business / Lead Name":"Cooper Taylor","Lead Type":"Live","Lead Cost Individually":149.99,"Lead Source":"Repeat Client","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":15000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"3/4/2026","Settled Amount":12864,"Commission Total":428.01,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Latitude","Credit Decision Date":"27/3/2026"},{"Lead ID":"L-0055","Lead Received Date":"29/3/2026","Business / Lead Name":"Sophie Tran","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Referral Partner","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":80000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Living expenses inconsistent with bank statements","Lost Date":"10/4/2026","Current Stage":"Closed - Declined","Lender":"Morris Finance","Credit Decision Date":"10/4/2026"},{"Lead ID":"L-0056","Lead Received Date":"16/3/2026","Business / Lead Name":"Isaac O'Brien","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Repeat Client","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Subaru Forester","Requested Amount":22000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"6/4/2026","Settled Amount":23668,"Commission Total":896.27,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"FirstMac","Credit Decision Date":"2/4/2026"},{"Lead ID":"L-0057","Lead Received Date":"1/3/2026","Business / Lead Name":"Tyler Mitchell","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Referral Partner","Product Type":"Vehicle Finance","Vehicle / Asset":"2021 Holden Colorado","Requested Amount":35000,"Qualification Status":"Not Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Lost interest","Lost Date":"14/3/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0058","Lead Received Date":"9/3/2026","Business / Lead Name":"Henry Anderson","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Social Media","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":60000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"23/3/2026","Settled Amount":62657,"Commission Total":2154.05,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Azora","Credit Decision Date":"18/3/2026"},{"Lead ID":"L-0059","Lead Received Date":"15/3/2026","Business / Lead Name":"Sophia Fraser","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Google Ads","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":55000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"7. Application Submitted","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0060","Lead Received Date":"12/3/2026","Business / Lead Name":"Jordan Tran","Lead Type":"Live","Lead Cost Individually":149.99,"Lead Source":"Repeat Client","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":52000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Multiple recent enquiries","Lost Date":"19/3/2026","Current Stage":"Closed - Declined","Lender":"Now Finance","Credit Decision Date":"19/3/2026"},{"Lead ID":"L-0061","Lead Received Date":"8/3/2026","Business / Lead Name":"Henry O'Brien","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Google Ads","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Mitsubishi Triton","Requested Amount":32000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Multiple recent enquiries","Lost Date":"18/3/2026","Current Stage":"Closed - Declined","Lender":"Azora","Credit Decision Date":"18/3/2026"},{"Lead ID":"L-0062","Lead Received Date":"19/3/2026","Business / Lead Name":"Madison Thompson","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Referral Partner","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 Kia Sportage","Requested Amount":45000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"4/4/2026","Settled Amount":42115,"Commission Total":1701.8,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Liberty","Credit Decision Date":"31/3/2026"},{"Lead ID":"L-0063","Lead Received Date":"2/3/2026","Business / Lead Name":"Madison Della-Vecchia","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Broker Network","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 Isuzu D-MAX","Requested Amount":72000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"18/3/2026","Settled Amount":72845,"Commission Total":2509.26,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Latitude","Credit Decision Date":"15/3/2026"},{"Lead ID":"L-0064","Lead Received Date":"31/3/2026","Business / Lead Name":"Harvey Martin","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Broker Network","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":55000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Insufficient credit history","Lost Date":"12/4/2026","Current Stage":"Closed - Declined","Lender":"Liberty","Credit Decision Date":"12/4/2026"},{"Lead ID":"L-0065","Lead Received Date":"5/3/2026","Business / Lead Name":"Lara Anderson","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Repeat Client","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":25000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"5. Matching With Lender","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0066","Lead Received Date":"13/3/2026","Business / Lead Name":"Damian McKenzie","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Social Media","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":45000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"21/3/2026","Settled Amount":46994,"Commission Total":2206.97,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Pepper Money","Credit Decision Date":"18/3/2026"},{"Lead ID":"L-0067","Lead Received Date":"21/3/2026","Business / Lead Name":"Oliver Roberts","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Broker Network","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":32000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"4. Reviewing Your File","Lender":"Macquarie","Credit Decision Date":""},{"Lead ID":"L-0068","Lead Received Date":"23/3/2026","Business / Lead Name":"Hunter Brown","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Referral Partner","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":45000,"Qualification Status":"Not Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Client went elsewhere","Lost Date":"11/4/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0069","Lead Received Date":"30/3/2026","Business / Lead Name":"Henry Tran","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Google Ads","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":38000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"7. Application Submitted","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0070","Lead Received Date":"3/3/2026","Business / Lead Name":"Connor Halloran","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Repeat Client","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Ford Everest","Requested Amount":65000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"7. Application Submitted","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0071","Lead Received Date":"31/3/2026","Business / Lead Name":"Toby Chen","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Direct Website","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":18500,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Lost interest","Lost Date":"15/4/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0072","Lead Received Date":"3/3/2026","Business / Lead Name":"Michael Marchetti","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Google Ads","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":18500,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"10. Final Bits","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0073","Lead Received Date":"15/3/2026","Business / Lead Name":"Ava Whitmore","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Repeat Client","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 BYD Atto 3","Requested Amount":72000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"9. Conditional Approval","Lender":"Angle Finance","Credit Decision Date":""},{"Lead ID":"L-0074","Lead Received Date":"4/3/2026","Business / Lead Name":"Eva Nguyen","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Repeat Client","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":45000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Bought with cash","Lost Date":"10/3/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0075","Lead Received Date":"9/3/2026","Business / Lead Name":"Marcus Russo","Lead Type":"MQL","Lead Cost Individually":39.99,"Lead Source":"Broker Network","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":65000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Living expenses inconsistent with bank statements","Lost Date":"15/3/2026","Current Stage":"Closed - Declined","Lender":"Latitude","Credit Decision Date":"15/3/2026"},{"Lead ID":"L-0076","Lead Received Date":"20/3/2026","Business / Lead Name":"Jasmine Wilson","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Google Ads","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":42000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"ABN trading history insufficient","Lost Date":"27/3/2026","Current Stage":"Closed - Declined","Lender":"Branded Financial","Credit Decision Date":"27/3/2026"},{"Lead ID":"L-0077","Lead Received Date":"23/3/2026","Business / Lead Name":"Michael Sutherland","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Social Media","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Toyota HiLux SR5","Requested Amount":32000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"11. Loan Documents","Lender":"Finance One","Credit Decision Date":""},{"Lead ID":"L-0078","Lead Received Date":"27/3/2026","Business / Lead Name":"Bianca Martin","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Referral Partner","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":72000,"Qualification Status":"Not Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Bought with cash","Lost Date":"9/4/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0079","Lead Received Date":"16/3/2026","Business / Lead Name":"Jacob Patel","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Google Ads","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":80000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"25/3/2026","Settled Amount":79263,"Commission Total":3336.14,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Metro Finance","Credit Decision Date":"20/3/2026"},{"Lead ID":"L-0080","Lead Received Date":"11/3/2026","Business / Lead Name":"Emily Smith","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Social Media","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":45000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"10. Final Bits","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0081","Lead Received Date":"15/3/2026","Business / Lead Name":"Jordan Hughes","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Google Ads","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Ford Everest","Requested Amount":65000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"5. Matching With Lender","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0082","Lead Received Date":"8/3/2026","Business / Lead Name":"Aria Brown","Lead Type":"Live","Lead Cost Individually":149.99,"Lead Source":"Repeat Client","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":72000,"Qualification Status":"Not Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Changed mind","Lost Date":"25/3/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0083","Lead Received Date":"21/3/2026","Business / Lead Name":"Maya Brown","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Referral Partner","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":80000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"3. Chasing Documents","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0084","Lead Received Date":"15/3/2026","Business / Lead Name":"Felix Smith","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Direct Website","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":60000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"4. Reviewing Your File","Lender":"Morris Finance","Credit Decision Date":""},{"Lead ID":"L-0085","Lead Received Date":"9/3/2026","Business / Lead Name":"Marcus Rutherford","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Direct Website","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":48000,"Qualification Status":"Not Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Withdrew application","Lost Date":"26/3/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0086","Lead Received Date":"29/3/2026","Business / Lead Name":"Amelia Pemberton","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Direct Website","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":38000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Employment tenure below minimum","Lost Date":"5/4/2026","Current Stage":"Closed - Declined","Lender":"Azora","Credit Decision Date":"5/4/2026"},{"Lead ID":"L-0087","Lead Received Date":"3/3/2026","Business / Lead Name":"Mason Sutherland","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 Nissan Navara","Requested Amount":65000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"2. Welcome Call & Docs Request","Lender":"Morris Finance","Credit Decision Date":""},{"Lead ID":"L-0088","Lead Received Date":"2/3/2026","Business / Lead Name":"Cooper Tran","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Repeat Client","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":38000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"4. Reviewing Your File","Lender":"Pepper Money","Credit Decision Date":""},{"Lead ID":"L-0089","Lead Received Date":"20/3/2026","Business / Lead Name":"Hannah Romano","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Direct Website","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":38000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"7. Application Submitted","Lender":"Angle Finance","Credit Decision Date":""},{"Lead ID":"L-0090","Lead Received Date":"1/3/2026","Business / Lead Name":"Bianca Fraser","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Referral Partner","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":22000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"7. Application Submitted","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0091","Lead Received Date":"14/3/2026","Business / Lead Name":"Bianca McKenzie","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Repeat Client","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":55000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Stopped responding","Lost Date":"22/3/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0092","Lead Received Date":"12/3/2026","Business / Lead Name":"Hunter Johnson","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Social Media","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 Land Rover Discovery","Requested Amount":42000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"20/3/2026","Settled Amount":46459,"Commission Total":1754.6,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Macquarie","Credit Decision Date":"16/3/2026"},{"Lead ID":"L-0093","Lead Received Date":"1/4/2026","Business / Lead Name":"Lucas Wang","Lead Type":"Live","Lead Cost Individually":149.99,"Lead Source":"Repeat Client","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":42000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"8. Lender Reviewing","Lender":"Finance One","Credit Decision Date":""},{"Lead ID":"L-0094","Lead Received Date":"16/4/2026","Business / Lead Name":"Tyler Pemberton","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Repeat Client","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":22000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Changed mind","Lost Date":"30/4/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0095","Lead Received Date":"5/4/2026","Business / Lead Name":"Daniel McKenzie","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Google Ads","Product Type":"Vehicle Finance","Vehicle / Asset":"2021 Skoda Karoq","Requested Amount":25000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"29/4/2026","Settled Amount":23111,"Commission Total":741.97,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Latitude","Credit Decision Date":"22/4/2026"},{"Lead ID":"L-0096","Lead Received Date":"14/4/2026","Business / Lead Name":"Jacob Nguyen","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Repeat Client","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":72000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"7. Application Submitted","Lender":"Latitude","Credit Decision Date":""},{"Lead ID":"L-0097","Lead Received Date":"7/4/2026","Business / Lead Name":"Caleb Foster","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Direct Website","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":52000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"25/4/2026","Settled Amount":49496,"Commission Total":1601.28,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Finance One","Credit Decision Date":"23/4/2026"},{"Lead ID":"L-0098","Lead Received Date":"15/4/2026","Business / Lead Name":"Sebastian Rutherford","Lead Type":"MQL","Lead Cost Individually":39.99,"Lead Source":"Referral Partner","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":18500,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"5. Matching With Lender","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0099","Lead Received Date":"7/4/2026","Business / Lead Name":"Sebastian Whitmore","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Google Ads","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 MG HS","Requested Amount":38000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Insufficient credit history","Lost Date":"19/4/2026","Current Stage":"Closed - Declined","Lender":"Now Finance","Credit Decision Date":"19/4/2026"},{"Lead ID":"L-0100","Lead Received Date":"5/4/2026","Business / Lead Name":"Sarah Mitchell","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Broker Network","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 BYD Atto 3","Requested Amount":15000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Lost interest","Lost Date":"17/4/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0101","Lead Received Date":"6/4/2026","Business / Lead Name":"Ethan Nguyen","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Repeat Client","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":22000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"8. Lender Reviewing","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0102","Lead Received Date":"4/4/2026","Business / Lead Name":"Owen Pemberton","Lead Type":"MQL","Lead Cost Individually":39.99,"Lead Source":"Repeat Client","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 LDV T60","Requested Amount":80000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"11/4/2026","Settled Amount":77498,"Commission Total":3717.06,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Metro Finance","Credit Decision Date":"6/4/2026"},{"Lead ID":"L-0103","Lead Received Date":"14/4/2026","Business / Lead Name":"Maya Chen","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Social Media","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Mitsubishi Outlander","Requested Amount":22000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Income to debt ratio outside policy","Lost Date":"18/4/2026","Current Stage":"Closed - Declined","Lender":"Now Finance","Credit Decision Date":"18/4/2026"},{"Lead ID":"L-0104","Lead Received Date":"11/4/2026","Business / Lead Name":"Hunter Wang","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Direct Website","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":25000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"3. Chasing Documents","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0105","Lead Received Date":"7/4/2026","Business / Lead Name":"Owen Nguyen","Lead Type":"Live","Lead Cost Individually":149.99,"Lead Source":"Repeat Client","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":65000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"17/4/2026","Settled Amount":64560,"Commission Total":2136.67,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Angle Finance","Credit Decision Date":"13/4/2026"},{"Lead ID":"L-0106","Lead Received Date":"12/4/2026","Business / Lead Name":"Tahlia Taylor","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Repeat Client","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Hyundai i30","Requested Amount":22000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Stopped responding","Lost Date":"28/4/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0107","Lead Received Date":"11/4/2026","Business / Lead Name":"Aria Henderson","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Social Media","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 Nissan Navara","Requested Amount":18500,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Client went elsewhere","Lost Date":"27/4/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0108","Lead Received Date":"7/4/2026","Business / Lead Name":"Harvey Phillips","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Social Media","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":52000,"Qualification Status":"Not Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Client went elsewhere","Lost Date":"23/4/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0109","Lead Received Date":"8/4/2026","Business / Lead Name":"Olivia Halloran","Lead Type":"Live","Lead Cost Individually":119.99,"Lead Source":"Referral Partner","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Ford Everest","Requested Amount":15000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"7. Application Submitted","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0110","Lead Received Date":"12/4/2026","Business / Lead Name":"Jacob Ashford","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 LDV T60","Requested Amount":22000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Recent payday loan activity","Lost Date":"15/4/2026","Current Stage":"Closed - Declined","Lender":"Azora","Credit Decision Date":"15/4/2026"},{"Lead ID":"L-0111","Lead Received Date":"7/4/2026","Business / Lead Name":"Felix Hughes","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2021 Holden Colorado","Requested Amount":52000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"3. Chasing Documents","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0112","Lead Received Date":"5/4/2026","Business / Lead Name":"Liam Marchetti","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Direct Website","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":42000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"25/4/2026","Settled Amount":42978,"Commission Total":1623.88,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"FirstMac","Credit Decision Date":"21/4/2026"},{"Lead ID":"L-0113","Lead Received Date":"7/4/2026","Business / Lead Name":"Chloe Henderson","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 Toyota Prado","Requested Amount":25000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"ABN trading history insufficient","Lost Date":"19/4/2026","Current Stage":"Closed - Declined","Lender":"Westpac","Credit Decision Date":"19/4/2026"},{"Lead ID":"L-0114","Lead Received Date":"10/4/2026","Business / Lead Name":"Marcus Halloran","Lead Type":"MQL","Lead Cost Individually":39.99,"Lead Source":"Referral Partner","Product Type":"Vehicle Finance","Vehicle / Asset":"2021 Volkswagen Tiguan","Requested Amount":15000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"4. Reviewing Your File","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0115","Lead Received Date":"10/4/2026","Business / Lead Name":"James Romano","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Repeat Client","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Mazda BT-50","Requested Amount":32000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"5. Matching With Lender","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0116","Lead Received Date":"12/4/2026","Business / Lead Name":"Daniel Tran","Lead Type":"MQL","Lead Cost Individually":39.99,"Lead Source":"Referral Partner","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 Isuzu D-MAX","Requested Amount":65000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"2/5/2026","Settled Amount":66697,"Commission Total":2168.65,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Angle Finance","Credit Decision Date":"27/4/2026"},{"Lead ID":"L-0117","Lead Received Date":"10/4/2026","Business / Lead Name":"Michael O'Brien","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Direct Website","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":65000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Recent payday loan activity","Lost Date":"18/4/2026","Current Stage":"Closed - Declined","Lender":"FirstMac","Credit Decision Date":"18/4/2026"},{"Lead ID":"L-0118","Lead Received Date":"4/4/2026","Business / Lead Name":"Marcus Bennett","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Referral Partner","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":55000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"8. Lender Reviewing","Lender":"Morris Finance","Credit Decision Date":""},{"Lead ID":"L-0119","Lead Received Date":"6/4/2026","Business / Lead Name":"Lucas Bennett","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Volvo XC40","Requested Amount":52000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"17/4/2026","Settled Amount":50935,"Commission Total":1256.72,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Now Finance","Credit Decision Date":"14/4/2026"},{"Lead ID":"L-0120","Lead Received Date":"6/4/2026","Business / Lead Name":"Noah Mitchell","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Social Media","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":65000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"1/5/2026","Settled Amount":65677,"Commission Total":2608.0,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Branded Financial","Credit Decision Date":"25/4/2026"},{"Lead ID":"L-0121","Lead Received Date":"11/4/2026","Business / Lead Name":"Stella Davies","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Repeat Client","Product Type":"Equipment Finance","Vehicle / Asset":"Excavator / Plant Equipment","Requested Amount":22000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"7. Application Submitted","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0122","Lead Received Date":"2/4/2026","Business / Lead Name":"Noah McKenzie","Lead Type":"Live","Lead Cost Individually":229.99,"Lead Source":"Broker Network","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 BYD Atto 3","Requested Amount":65000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"18/4/2026","Settled Amount":62628,"Commission Total":2427.54,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Metro Finance","Credit Decision Date":"16/4/2026"},{"Lead ID":"L-0123","Lead Received Date":"13/4/2026","Business / Lead Name":"Daniel Chen","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Repeat Client","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":48000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"11. Loan Documents","Lender":"Money3","Credit Decision Date":""},{"Lead ID":"L-0124","Lead Received Date":"15/4/2026","Business / Lead Name":"Brandon Anderson","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Audi Q5","Requested Amount":18500,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Lost interest","Lost Date":"4/5/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0125","Lead Received Date":"6/4/2026","Business / Lead Name":"Hunter Patel","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Social Media","Product Type":"Boat Finance","Vehicle / Asset":"Quintrex 540 Cruiseabout","Requested Amount":48000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"2. Welcome Call & Docs Request","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0126","Lead Received Date":"11/4/2026","Business / Lead Name":"Mason Cleveland","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Direct Website","Product Type":"Vehicle Finance","Vehicle / Asset":"2023 Land Rover Discovery","Requested Amount":45000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Withdrew application","Lost Date":"20/4/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0127","Lead Received Date":"5/4/2026","Business / Lead Name":"Lara Rutherford","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Direct Website","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":28500,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Multiple recent enquiries","Lost Date":"9/4/2026","Current Stage":"Closed - Declined","Lender":"Westpac","Credit Decision Date":"9/4/2026"},{"Lead ID":"L-0128","Lead Received Date":"13/4/2026","Business / Lead Name":"Brandon Walker","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Referral Partner","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":60000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"20/4/2026","Settled Amount":59970,"Commission Total":1800.93,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Finance One","Credit Decision Date":"16/4/2026"},{"Lead ID":"L-0129","Lead Received Date":"16/4/2026","Business / Lead Name":"Ethan Davies","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Broker Network","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":45000,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"9/5/2026","Settled Amount":48315,"Commission Total":1740.98,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"Azora","Credit Decision Date":"3/5/2026"},{"Lead ID":"L-0130","Lead Received Date":"2/4/2026","Business / Lead Name":"Lily Halloran","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Google Ads","Product Type":"Vehicle Finance","Vehicle / Asset":"2022 Volvo XC40","Requested Amount":28500,"Qualification Status":"Qualified","Application Outcome":"Approved","Settlement Date":"14/4/2026","Settled Amount":31407,"Commission Total":1048.35,"Final Status":"Settled","Lost Reason":"","Lost Date":"","Current Stage":"16. File Wrapped Up","Lender":"FirstMac","Credit Decision Date":"10/4/2026"},{"Lead ID":"L-0131","Lead Received Date":"8/4/2026","Business / Lead Name":"Madison Chen","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Repeat Client","Product Type":"Vehicle Finance","Vehicle / Asset":"2021 Skoda Karoq","Requested Amount":38000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Existing default on file","Lost Date":"14/4/2026","Current Stage":"Closed - Declined","Lender":"Angle Finance","Credit Decision Date":"14/4/2026"},{"Lead ID":"L-0132","Lead Received Date":"15/4/2026","Business / Lead Name":"Hunter Patel","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Google Ads","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":32000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"4. Reviewing Your File","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0133","Lead Received Date":"2/4/2026","Business / Lead Name":"Cooper Cleveland","Lead Type":"MQL","Lead Cost Individually":79.99,"Lead Source":"Broker Network","Product Type":"Caravan Finance","Vehicle / Asset":"Jayco Crosstrak","Requested Amount":80000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Recent payday loan activity","Lost Date":"9/4/2026","Current Stage":"Closed - Declined","Lender":"Morris Finance","Credit Decision Date":"9/4/2026"},{"Lead ID":"L-0134","Lead Received Date":"6/4/2026","Business / Lead Name":"Zachary Davies","Lead Type":"Live","Lead Cost Individually":189.99,"Lead Source":"Repeat Client","Product Type":"Vehicle Finance","Vehicle / Asset":"2021 Skoda Karoq","Requested Amount":22000,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"8. Lender Reviewing","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0135","Lead Received Date":"14/4/2026","Business / Lead Name":"Zachary Foster","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Referral Partner","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Subaru Forester","Requested Amount":55000,"Qualification Status":"Qualified","Application Outcome":"Declined","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Existing default on file","Lost Date":"17/4/2026","Current Stage":"Closed - Declined","Lender":"Branded Financial","Credit Decision Date":"17/4/2026"},{"Lead ID":"L-0136","Lead Received Date":"4/4/2026","Business / Lead Name":"Eva Davies","Lead Type":"SQL","Lead Cost Individually":89.99,"Lead Source":"Repeat Client","Product Type":"Vehicle Finance","Vehicle / Asset":"2024 Ford Everest","Requested Amount":18500,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Lost","Lost Reason":"Changed mind","Lost Date":"13/4/2026","Current Stage":"Closed - Lost","Lender":"","Credit Decision Date":""},{"Lead ID":"L-0137","Lead Received Date":"1/4/2026","Business / Lead Name":"Olivia Turner","Lead Type":"SQL","Lead Cost Individually":99.99,"Lead Source":"Direct Website","Product Type":"Personal Loan","Vehicle / Asset":"Personal Use","Requested Amount":28500,"Qualification Status":"Qualified","Application Outcome":"","Settlement Date":"","Settled Amount":0,"Commission Total":0,"Final Status":"Open","Lost Reason":"","Lost Date":"","Current Stage":"11. Loan Documents","Lender":"Morris Finance","Credit Decision Date":""}];
+
+function _parseDemoDate(s){if(!s)return null;const p=String(s).split('/');if(p.length!==3)return null;const d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));return isNaN(d)?null:d;}
+function _parseDemoMonth(s){const d=_parseDemoDate(s);return d?d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"):null;}
+
+function buildDemoData() {
+  const leads = DEMO_LEADS.map(l => ({
+    id: l['Lead ID'],
+    date: l['Lead Received Date'],
+    business: l['Business / Lead Name'],
+    contact: l['Business / Lead Name'],
+    type: l['Lead Type'],
+    cost: l['Lead Cost Individually'],
+    source: l['Lead Source'],
+    product: l['Product Type'],
+    requestedAmt: l['Requested Amount'],
+    qualStatus: l['Qualification Status'],
+    outcome: l['Application Outcome'],
+    settleDate: l['Settlement Date'],
+    settledAmt: l['Settled Amount'],
+    commTotal: l['Commission Total'],
+    finalStatus: l['Final Status'],
+    lostReason: l['Lost Reason'],
+    currentStage: l['Current Stage'],
+    lender: l['Lender'],
+    month: _parseDemoMonth(l['Lead Received Date']),
+    settlementMonth: _parseDemoMonth(l['Settlement Date']),
+    creditDecisionMonth: _parseDemoMonth(l['Credit Decision Date']),
+    lostMonth: _parseDemoMonth(l['Lost Date'])
+  }));
+  
+  // Compute loss reasons aggregate
+  const lossMap = {};
+  leads.filter(l => l.finalStatus === 'Lost' && l.lostReason).forEach(l => {
+    lossMap[l.lostReason] = (lossMap[l.lostReason] || 0) + 1;
+  });
+  const totalLost = Object.values(lossMap).reduce((a,b)=>a+b,0);
+  const lossReasons = Object.entries(lossMap)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([reason, count]) => ({
+      reason: reason,
+      count: count,
+      share: ((count/totalLost)*100).toFixed(1)+'%'
+    }));
+  
+  return {leads, lossReasons};
+}
+
+// Auto-rebuild ledger from leads
+function rebuildFundOneLedger(){
+  if(!D||!D.leads||!D.leads.length)return;
+  const byMonth={};
+  D.leads.forEach(l=>{
+    if(l.settlementMonth){const k=l.settlementMonth;if(!byMonth[k])byMonth[k]={income:0,costs:0};byMonth[k].income+=(num(l.commTotal)||0)*0.7;}
+    if(l.month){const k=l.month;if(!byMonth[k])byMonth[k]={income:0,costs:0};byMonth[k].costs+=num(l.cost)||0;}
+  });
+  const months=Object.keys(byMonth).sort().map(k=>{
+    const[y,m]=k.split("-");
+    const monthName=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(m)-1];
+    const data=byMonth[k];
+    return{label:monthName+" "+y, income:Math.round(data.income*100)/100, costs:Math.round(data.costs*100)/100, gstAdj:0, notes:""};
+  });
+  FUNDONE_LEDGER.months=months;
+}
+
+
+const num=s=>{if(s==null||s==="")return 0;let v=String(s).replace(/[$,\s%]/g,"").replace(/[−–]/g,"-").replace(/^\((.+)\)$/,"-$1");const n=parseFloat(v);return isNaN(n)?0:n;};
+const fmt=n=>{if(n==null||isNaN(n))return"$0";const a=Math.abs(n);if(a>=1000000)return(n<0?"-":"")+"$"+(a/1000000).toFixed(2)+"M";if(a>=1000)return(n<0?"-":"")+"$"+(a/1000).toFixed(1)+"k";return(n<0?"-$":"$")+a.toLocaleString("en-AU",{minimumFractionDigits:0,maximumFractionDigits:0});};
+const fmt2=n=>{if(n==null||isNaN(n))return"$0.00";const a=Math.abs(n).toLocaleString("en-AU",{minimumFractionDigits:2,maximumFractionDigits:2});return n<0?"-$"+a:"$"+a;};
+const fmtFull=n=>{if(n==null||isNaN(n))return"$0";return(n<0?"-$":"$")+Math.abs(n).toLocaleString("en-AU",{minimumFractionDigits:0,maximumFractionDigits:0});};
+const pct=n=>{if(isNaN(n)||!isFinite(n))return"—";return(n*100).toFixed(1)+"%";};
+const esc=s=>s?String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"):"";
+const sDate=d=>{if(!d||d==="-")return"—";const s=String(d),m=s.match(/(\d{1,2})-([A-Za-z]+)-(\d{4})/);if(m)return m[1]+" "+m[2];const m2=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m2){const M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return parseInt(m2[1])+" "+M[parseInt(m2[2])-1];}return s.slice(0,10);};
+
+function findRow(rows,col,val){for(let i=0;i<rows.length;i++){if(rows[i]&&String(rows[i][col]||"").trim()===val)return i;}return-1;}
+function headerMap(rows,hr){const m={};if(!rows[hr])return m;rows[hr].forEach((h,i)=>{const k=String(h||"").trim();if(k)m[k]=i;});return m;}
+
+function parseMonth(s){
+  if(!s) return null;
+  const str=String(s);
+  // "27-Feb-2026" or "01/02/2026" or "Feb 2026"
+  const m1=str.match(/(\d{1,2})-([A-Za-z]+)-(\d{4})/);
+  if(m1){const M={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};return m1[3]+"-"+String(M[m1[2]]||1).padStart(2,"0");}
+  const m2=str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m2)return m2[3]+"-"+m2[2].padStart(2,"0");
+  const m3=str.match(/([A-Za-z]+)\s+(\d{4})/);
+  if(m3){const M={Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};return m3[2]+"-"+(M[m3[1]]||"01");}
+  return null;
+}
+function monthLabel(ym){
+  if(!ym)return"?";
+  const[y,m]=ym.split("-");
+  const M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return M[parseInt(m)-1]+" "+y;
+}
+function parseDate(s){
+  if(!s||s==="-")return null;
+  const str=String(s);
+  const m1=str.match(/(\d{1,2})-([A-Za-z]+)-(\d{4})/);
+  if(m1){const M={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};return new Date(parseInt(m1[3]),M[m1[2]],parseInt(m1[1]));}
+  const m2=str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m2)return new Date(parseInt(m2[3]),parseInt(m2[2])-1,parseInt(m2[1]));
+  return null;
+}
+function computeBudget(leads){
+  const WEEKLY=1000;
+  const MONTHLY_EQ=WEEKLY*52/12; // $4,333.33 flat, matches Lead Cycles sheet
+  const FOUR_WEEK_CAP=WEEKLY*4;  // $4,000 strict cap
+  const now=new Date();
+  const day=now.getDate();
+  let cycleStart,cycleEnd;
+  if(day>=15){cycleStart=new Date(now.getFullYear(),now.getMonth(),15);cycleEnd=new Date(now.getFullYear(),now.getMonth()+1,15);}
+  else{cycleStart=new Date(now.getFullYear(),now.getMonth()-1,15);cycleEnd=new Date(now.getFullYear(),now.getMonth(),15);}
+  let spent=0;
+  leads.forEach(l=>{const d=parseDate(l.date);if(d&&d>=cycleStart&&d<cycleEnd)spent+=l.cost;});
+  const leftMonthly=MONTHLY_EQ-spent;
+  const leftCap=FOUR_WEEK_CAP-spent;
+  const daysLeft=Math.max(0,Math.round((cycleEnd-now)/(1000*60*60*24)));
+  const weeksLeft=Math.max(0.15,daysLeft/7);
+  const weeklyAllowance=leftCap/weeksLeft;
+  const cycleLabel=cycleStart.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][cycleStart.getMonth()]+" → "+cycleEnd.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][cycleEnd.getMonth()];
+  return{cycleLabel,monthlyEq:MONTHLY_EQ,fourWeekCap:FOUR_WEEK_CAP,spent,leftMonthly,leftCap,daysLeft,weeklyAllowance,WEEKLY};
+}
+function getInsight(s){
+  if(!s||s.total===0)return"No data yet for this period.";
+  if(s.total<5)return"Only "+s.total+" leads in this view — stats will get meaningful around 15+.";
+  const spend=s.totalSpend||0;
+  const earned=(s.commSettled||0)*0.7;
+  const roi=spend>0?earned/spend:0;
+  const costPerSettlement=s.settledCount>0?spend/s.settledCount:0;
+  const lr=s.lossReasonCounts||{};
+  // Find top loss reason
+  let topReason=null,topCount=0;
+  for(const[k,v]of Object.entries(lr)){if(v>topCount){topReason=k;topCount=v;}}
+  // ROI-driven insights first
+  if(roi>=1.5&&s.settledCount>=3)return"You're making "+roi.toFixed(1)+"x back after split on lead spend. Every dollar in is "+fmt2(earned/spend)+" out. Pour more in.";
+  if(roi>=1&&roi<1.5&&s.settledCount>=2)return"Breakeven-plus: "+fmt2(earned)+" earned after split vs "+fmt2(spend)+" spent. Working, but thin margin — more volume or better-converting sources would widen it.";
+  if(roi<1&&s.settledCount>=2)return"You're behind right now: "+fmt2(earned)+" earned after split vs "+fmt2(spend)+" spent. Not a process issue — volume isn't high enough yet for the conversion rate to cover costs. Stack more settlements before judging.";
+  if(s.settledCount===0&&s.submittedCount>=3)return s.submittedCount+" applications in-flight, nothing settled yet. The commission is sitting with the lenders, not with you — chase their timelines.";
+  if(s.settledCount===0&&s.total>=10)return s.total+" leads in, zero settled. Could be timing (deals still cooking) or a product/source mismatch. Worth slicing by lead source to see which bucket is killing the numbers.";
+  if(costPerSettlement>0)return "Each settlement is costing you "+fmt2(costPerSettlement)+" in lead spend. Keep that number shrinking and the ROI takes care of itself.";
+  return "Nothing screaming for attention. Keep volume up.";
+}
+const QUOTES_ALLTIME=[
+  '"The harder I work, the luckier I get." — Samuel Goldwyn',
+  '"Success is the sum of small efforts repeated day in and day out." — Robert Collier',
+  '"The expert in anything was once a beginner." — Helen Hayes',
+  '"Don\'t wait for opportunity. Create it." — George Bernard Shaw',
+  '"It always seems impossible until it\'s done." — Nelson Mandela',
+  '"Fall seven times, stand up eight." — Japanese Proverb',
+  '"Consistency is what transforms average into excellence." — Unknown',
+  '"You don\'t have to be great to start, but you have to start to be great." — Zig Ziglar',
+  '"Discipline is the bridge between goals and accomplishment." — Jim Rohn',
+  '"The best time to plant a tree was 20 years ago. The second best time is now." — Chinese Proverb',
+  '"Success is not final, failure is not fatal: it is the courage to continue that counts." — Winston Churchill',
+  '"Do the hard jobs first. The easy jobs will take care of themselves." — Dale Carnegie',
+  '"Every no gets you closer to a yes." — Unknown',
+  '"The man on top of the mountain didn\'t fall there." — Vince Lombardi',
+  '"What you do every day matters more than what you do once in a while." — Gretchen Rubin'
+];
+const QUOTES_MONTHLY=[
+  '"Don\'t count the days. Make the days count." — Muhammad Ali',
+  '"You miss 100% of the shots you don\'t take." — Wayne Gretzky',
+  '"Action is the foundational key to all success." — Pablo Picasso',
+  '"Starve your distractions, feed your focus." — Unknown',
+  '"This month is a blank page. Write a good one." — Unknown',
+  '"Small daily improvements are the key to staggering long-term results." — Unknown',
+  '"One phone call can change your entire month." — Unknown',
+  '"Pressure is a privilege." — Billie Jean King',
+  '"The only way to do great work is to love what you do." — Steve Jobs',
+  '"Hustle beats talent when talent doesn\'t hustle." — Ross Simmonds',
+  '"You were born to be a player, not to be led by score." — Bill Russell',
+  '"Make each day your masterpiece." — John Wooden',
+  '"The difference between ordinary and extraordinary is that little extra." — Jimmy Johnson',
+  '"Strive for progress, not perfection." — Unknown',
+  '"What you do today can improve all your tomorrows." — Ralph Marston'
+];
+function getQuote(pool){
+  const d=new Date();
+  const start=new Date(d.getFullYear(),0,0);
+  const day=Math.floor((d-start)/(1000*60*60*24));
+  return pool[day%pool.length];
+}
+
+function parseAll(raw){
+  const logRaw=raw.Leads_Log||[];
+  const logHR=findRow(logRaw,0,"Lead ID");
+  const hm=logHR>=0?headerMap(logRaw,logHR):{};
+  const leads=[];
+  for(let i=logHR+1;i<logRaw.length;i++){
+    const r=logRaw[i];if(!r||!r[0]||!String(r[0]).trim())continue;
+    leads.push({
+      id:r[hm["Lead ID"]]||"",date:r[hm["Lead Received Date"]]||"",business:r[hm["Business / Lead Name"]]||"",
+      type:r[hm["Lead Type"]]||"",cost:num(r[hm["Lead Cost Individually"]]),source:r[hm["Lead Source"]]||"",
+      product:r[hm["Product Type"]]||"",requestedAmt:num(r[hm["Requested Amount"]]),
+      qualStatus:r[hm["Qualification Status"]]||"",outcome:r[hm["Application Outcome"]]||"",
+      settleDate:r[hm["Settlement Date"]]||"",settledAmt:num(r[hm["Settled Amount"]]),
+      commTotal:num(r[hm["Commission Total"]]),finalStatus:r[hm["Final Status"]]||"",
+      lostReason:r[hm["Lost Reason"]]||"",currentStage:r[hm["Current Stage"]]||"",
+      month:parseMonth(r[hm["Lead Received Date"]]),
+      settlementMonth:parseMonth(r[hm["Settlement Date"]]),
+      creditDecisionMonth:parseMonth(r[hm["Credit Decision Date"]]),
+      lostMonth:parseMonth(r[hm["Lost Date"]])
+    });
+  }
+
+  // Loss reasons from Dashboard HUB (pre-computed with %)
+  const dh=raw["Dashboard HUB"]||[];
+  const lrHR=findRow(dh,0,"Reason");
+  const lossReasons=[];
+  if(lrHR>=0){for(let i=lrHR+1;i<dh.length;i++){const r=dh[i];if(!r||!r[0]||!String(r[0]).trim())break;lossReasons.push({reason:String(r[0]).trim(),count:num(r[1]),share:r[2]||""});}}
+
+  return{leads,lossReasons};
+}
+
+function computeStats(leads){
+  const total=leads.length;
+  const totalSpend=leads.reduce((s,l)=>s+l.cost,0);
+  const settled=leads.filter(l=>l.finalStatus==="Settled"||l.currentStage==="Settled");
+  const approved=leads.filter(l=>l.outcome==="Approved"||l.finalStatus==="Settled"||l.currentStage==="Approved"||l.currentStage==="Settled");
+  const declined=leads.filter(l=>l.outcome==="Declined"||l.lostReason==="Declined by Lender");
+  // Submitted = anything that went to lender: approved, declined, or lost with a lender-related reason
+  const submitted=leads.filter(l=>(l.outcome&&l.outcome!=="Not Submitted"&&l.outcome!=="-"&&l.outcome!=="")||l.lostReason==="Declined by Lender"||l.currentStage==="Submitted"||l.currentStage==="Approved"||l.currentStage==="Settled");
+  const lost=leads.filter(l=>l.finalStatus==="Lost"||l.currentStage==="Lost");
+  // Not qualified = closed/lost leads that never made it to submission
+  const submittedIds=new Set(submitted.map(l=>l.id));
+  const notQualified=lost.filter(l=>!submittedIds.has(l.id));
+  // Loss reason breakdown for insight engine
+  const lossReasonCounts={};
+  leads.forEach(l=>{if((l.finalStatus==="Lost"||l.currentStage==="Lost")&&l.lostReason){lossReasonCounts[l.lostReason]=(lossReasonCounts[l.lostReason]||0)+1;}});
+
+  const totalSettledAmt=settled.reduce((s,l)=>s+l.settledAmt,0);
+  const totalComm=leads.reduce((s,l)=>s+l.commTotal,0);
+  const commSettled=settled.reduce((s,l)=>s+l.commTotal,0);
+  const totalRequested=leads.reduce((s,l)=>s+l.requestedAmt,0);
+
+  return{
+    total,totalSpend,
+    settledCount:settled.length,approvedCount:approved.length,declinedCount:declined.length,
+    submittedCount:submitted.length,lostCount:lost.length,
+    notQualifiedCount:notQualified.length,
+    notQualifiedRate:total>0?notQualified.length/total:0,
+    successRate:total>0?settled.length/total:0,
+    approvalRate:submitted.length>0?approved.length/submitted.length:0,
+    declineRate:submitted.length>0?declined.length/submitted.length:0,
+    avgSpendPerLead:total>0?totalSpend/total:0,
+    totalSettledAmt,totalComm,commSettled,totalRequested,
+    avgLoanAmt:settled.length>0?totalSettledAmt/settled.length:0,
+    avgRequested:total>0?totalRequested/total:0,
+    lossReasonCounts
+  };
+}
+
+// For a given lead pool and target month (YYYY-MM or null for all time),
+// compute stats that should be grouped by event date (settlement/decision/lost) instead of lead received date.
+function computeSettlementStats(leads,targetMonth){
+  const settled=leads.filter(l=>{
+    const isSettled=(l.finalStatus==="Settled"||l.currentStage==="Settled");
+    if(!isSettled)return false;
+    if(targetMonth===null)return true;
+    return l.settlementMonth===targetMonth;
+  });
+  const locked=leads.filter(l=>{
+    if(targetMonth===null)return l.commTotal>0;
+    return l.commTotal>0&&l.settlementMonth===targetMonth;
+  });
+  const commLocked=locked.reduce((s,l)=>s+l.commTotal,0);
+  const commSettled=settled.reduce((s,l)=>s+l.commTotal,0);
+  const totalSettledAmt=settled.reduce((s,l)=>s+l.settledAmt,0);
+  const settledCount=settled.length;
+  const avgLoanAmt=settledCount>0?totalSettledAmt/settledCount:0;
+  // Approvals grouped by Credit Decision Date
+  const approvedCount=leads.filter(l=>{
+    const isApproved=(l.outcome==="Approved"||l.finalStatus==="Settled"||l.currentStage==="Approved"||l.currentStage==="Settled");
+    if(!isApproved)return false;
+    if(targetMonth===null)return true;
+    return l.creditDecisionMonth===targetMonth;
+  }).length;
+  // Declines grouped by Lost Date (lender declines)
+  const declinedCount=leads.filter(l=>{
+    const isDeclined=(l.outcome==="Declined"||l.lostReason==="Declined by Lender");
+    if(!isDeclined)return false;
+    if(targetMonth===null)return true;
+    return l.lostMonth===targetMonth;
+  }).length;
+  return{settledCount,commLocked,commSettled,totalSettledAmt,avgLoanAmt,approvedCount,declinedCount};
+}
+
+async function refreshData(){
+  const txt=document.getElementById("liveTxt"),err=document.getElementById("errMsg");
+  err.innerHTML="";
+  try{
+    const demo=buildDemoData();
+    D={leads:demo.leads,lossReasons:demo.lossReasons};
+    rebuildFundOneLedger();
+    txt.textContent="Demo · "+new Date().toLocaleTimeString();
+    document.getElementById("liveDot").style.display="block";
+    const lm=document.getElementById("loadMsg");if(lm)lm.remove();
+    render();
+  }catch(e){console.error(e);err.innerHTML='<div class="err-msg">'+esc(e.message)+'</div>';txt.textContent="Error";}
+}
+
+function connect(){const u=document.getElementById("urlInput").value.trim();if(!u)return;SCRIPT_URL=u;localStorage.setItem("broker-script-url",u);document.getElementById("setupBox").style.display="none";startRefresh();refreshData();}
+function toggleSetup(){const b=document.getElementById("setupBox");b.style.display=b.style.display==="none"?"block":"none";}
+function startRefresh(){if(refreshTimer)clearInterval(refreshTimer);refreshTimer=setInterval(refreshData,60000);refreshData();}
+function renderTabs(){document.getElementById("tabs").innerHTML=TABS.map(t=>'<button class="tab'+(t.k===activeTab?" on":"")+'" onclick="switchTab(\''+t.k+'\')">'+t.l+'</button>').join("");}
+function switchTab(k){activeTab=k;renderTabs();document.querySelectorAll(".sec").forEach(s=>s.classList.remove("on"));document.getElementById("sec-"+k).classList.add("on");render();}
+function render(){if(activeTab==="fundone"){rFundOne();return;}if(!D)return;({alltime:rAllTime,monthly:rMonthly,losses:rLosses,leads:rLeads})[activeTab]?.();}
+
+function statsCards(s,label){
+  return'<div class="sh"><h2>'+label+'</h2><span class="badge">'+s.total+' LEADS</span></div>'+
+  '<div class="mg mg5">'+
+    '<div class="mc"><div class="mc-l">Total Leads</div><div class="mc-v cm c-teal">'+s.total+'</div></div>'+
+    '<div class="mc"><div class="mc-l">Lead Spend</div><div class="mc-v cm">'+fmt2(s.totalSpend)+'</div></div>'+
+    '<div class="mc"><div class="mc-l">Avg Spend/Lead</div><div class="mc-v cm">'+fmt2(s.avgSpendPerLead)+'</div></div>'+
+    '<div class="mc"><div class="mc-l">Settlements</div><div class="mc-v cm c-pos">'+s.settledCount+'</div></div>'+
+    '<div class="mc"><div class="mc-l">Approvals</div><div class="mc-v cm c-pos">'+s.approvedCount+'</div></div>'+
+  '</div>'+
+  '<div class="mg mg5">'+
+    '<div class="mc"><div class="mc-l">Declines</div><div class="mc-v cm c-neg">'+s.declinedCount+'</div><div class="mc-s">By lender</div></div>'+
+    '<div class="mc"><div class="mc-l">Not Qualified</div><div class="mc-v cm c-warn">'+s.notQualifiedCount+'</div><div class="mc-s">'+pct(s.notQualifiedRate)+' · closed before submit</div></div>'+
+    '<div class="mc"><div class="mc-l">Success Rate</div><div class="mc-v cm '+(s.successRate>=0.1?"c-pos":"c-warn")+'">'+pct(s.successRate)+'</div><div class="mc-s">Settled / total leads</div></div>'+
+    '<div class="mc"><div class="mc-l">Approval Rate</div><div class="mc-v cm '+(s.approvalRate>=0.5?"c-pos":"c-warn")+'">'+pct(s.approvalRate)+'</div><div class="mc-s">Approved / submitted</div></div>'+
+    '<div class="mc"><div class="mc-l">Decline Rate</div><div class="mc-v cm '+(s.declineRate>0.4?"c-neg":"c-pos")+'">'+pct(s.declineRate)+'</div><div class="mc-s">Declined / submitted</div></div>'+
+    '<div class="mc"><div class="mc-l">Lost</div><div class="mc-v cm c-neg">'+s.lostCount+'</div></div>'+
+  '</div>'+
+  '<div class="mg mg5">'+
+    '<div class="mc"><div class="mc-l">Commission Settled</div><div class="mc-v cm c-teal">'+fmtFull(s.commSettled)+'</div><div class="mc-s">Full commission earned</div></div>'+
+    '<div class="mc"><div class="mc-l">After Split (70%)</div><div class="mc-v cm c-pos">'+fmtFull((s.commSettled||0)*0.7)+'</div><div class="mc-s">Your take-home</div></div>'+
+    '<div class="mc"><div class="mc-l">Total Settled Value</div><div class="mc-v cm c-pos">'+fmtFull(s.totalSettledAmt)+'</div></div>'+
+    '<div class="mc"><div class="mc-l">Avg Loan Settled</div><div class="mc-v cm">'+fmtFull(s.avgLoanAmt)+'</div><div class="mc-s">Per settled deal</div></div>'+
+    '<div class="mc"><div class="mc-l">Avg Requested</div><div class="mc-v cm">'+fmtFull(s.avgRequested)+'</div><div class="mc-s">Per lead</div></div>'+
+  '</div>';
+}
+
+window._leadTypeFilter=window._leadTypeFilter||"All";
+const LEAD_TYPES=["All","Live","MQL","SQL"];
+function filterLeadsByType(leads,type){if(type==="All")return leads;return leads.filter(l=>String(l.type||"").trim().toUpperCase()===type.toUpperCase());}
+function leadTypeFilter(){
+  const counts={};
+  LEAD_TYPES.forEach(t=>counts[t]=filterLeadsByType(D.leads,t).length);
+  return'<div class="filter-bar"><span class="filter-bar-label">Lead Type</span>'+
+    LEAD_TYPES.map(t=>'<button class="filter-btn'+(window._leadTypeFilter===t?" on":"")+'" onclick="window._leadTypeFilter=\''+t+'\';render();">'+t+'<span class="count">('+counts[t]+')</span></button>').join("")+
+  '</div>';
+}
+
+function budgetBlock(){
+  const b=computeBudget(D.leads);
+  const paceCol=b.leftCap<0?"c-neg":b.leftCap<b.weeklyAllowance?"c-warn":"c-pos";
+  return'<div class="sh" style="margin-top:24px"><h2>Lead Budget (15–15 Cycle)</h2><span class="badge">'+esc(b.cycleLabel)+'</span></div>'+
+  '<div class="mg mg4">'+
+    '<div class="mc"><div class="mc-l">Cycle Budget</div><div class="mc-v cm">'+fmt2(b.fourWeekCap)+'</div><div class="mc-s">$1000/week × 4</div></div>'+
+    '<div class="mc"><div class="mc-l">Spent This Cycle</div><div class="mc-v cm">'+fmt2(b.spent)+'</div><div class="mc-s">Leads received 15→15</div></div>'+
+    '<div class="mc"><div class="mc-l">Left This Cycle</div><div class="mc-v cm '+(b.leftCap<0?"c-neg":"c-pos")+'">'+fmt2(b.leftCap)+'</div><div class="mc-s">'+b.daysLeft+' days remaining</div></div>'+
+    '<div class="mc"><div class="mc-l">Safe To Spend This Week</div><div class="mc-v cm '+paceCol+'">'+fmt2(b.weeklyAllowance)+'</div><div class="mc-s">Paces you to budget</div></div>'+
+  '</div>';
+}
+function insightQuoteBlock(stats,pool){
+  return'<div class="insight"><div class="insight-icon">💡</div><div class="insight-body"><div class="insight-label">What to focus on</div><div class="insight-text">'+esc(getInsight(stats))+'</div></div></div>'+
+  '<div class="quote"><div class="quote-icon">"</div><div class="quote-body"><div class="quote-label">Daily fuel</div><div class="quote-text">'+esc(getQuote(pool))+'</div></div></div>';
+}
+
+function rAllTime(){
+  const filtered=filterLeadsByType(D.leads,window._leadTypeFilter);
+  const s=computeStats(filtered);
+  const lbl=window._leadTypeFilter==="All"?"All Time Performance":"All Time · "+window._leadTypeFilter+" Leads";
+  document.getElementById("sec-alltime").innerHTML=leadTypeFilter()+statsCards(s,lbl)+budgetBlock()+insightQuoteBlock(s,QUOTES_ALLTIME);
+}
+
+function rMonthly(){
+  const filteredLeads=filterLeadsByType(D.leads,window._leadTypeFilter);
+  const typeSuffix=window._leadTypeFilter==="All"?"":" · "+window._leadTypeFilter;
+  // Group by month (union of lead-received, settlement, credit decision and lost months)
+  const months={};
+  filteredLeads.forEach(l=>{const m=l.month;if(!m)return;if(!months[m])months[m]=[];months[m].push(l);});
+  const allMonthsSet=new Set(Object.keys(months));
+  filteredLeads.forEach(l=>{
+    if(l.settlementMonth)allMonthsSet.add(l.settlementMonth);
+    if(l.creditDecisionMonth)allMonthsSet.add(l.creditDecisionMonth);
+    if(l.lostMonth)allMonthsSet.add(l.lostMonth);
+  });
+  const sorted=Array.from(allMonthsSet).sort();
+  sorted.forEach(ym=>{if(!months[ym])months[ym]=[];});
+
+  // Selected month defaults to latest
+  if(!window._selMonth||!months[window._selMonth])window._selMonth=sorted[sorted.length-1];
+  const selM=window._selMonth;
+  const selStats=selM?computeStats(months[selM]):null;
+
+  const monthOpts=sorted.map(ym=>'<option value="'+ym+'"'+(ym===selM?" selected":"")+'>'+monthLabel(ym)+'</option>').reverse().join("");
+
+  // Build month cards
+  let monthCardsHTML='';
+  if(selStats){
+    const s=selStats;
+    // Settlement-date based stats for the selected month (commission, settlements, settled value, avg loan)
+    const sd=computeSettlementStats(filteredLeads,selM);
+    monthCardsHTML=
+    '<div class="sh"><h2>'+monthLabel(selM)+' Performance'+typeSuffix+'</h2><select onchange="window._selMonth=this.value;render();" style="background:var(--card);color:var(--txt);border:1px solid var(--bdr2);border-radius:8px;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:13px;cursor:pointer">'+monthOpts+'</select></div>'+
+    '<div style="font-size:11px;color:var(--mut);margin-bottom:12px">Leads & spend by <b style="color:var(--dim)">Lead Received Date</b> · Approvals by <b style="color:var(--dim)">Credit Decision Date</b> · Declines by <b style="color:var(--dim)">Lost Date</b> · Commission & settlements by <b style="color:var(--dim)">Settlement Date</b></div>'+
+    '<div class="mg mg5">'+
+      '<div class="mc"><div class="mc-l">Total Leads</div><div class="mc-v cm c-teal">'+s.total+'</div><div class="mc-s">Received this month</div></div>'+
+      '<div class="mc"><div class="mc-l">Lead Spend</div><div class="mc-v cm">'+fmt2(s.totalSpend)+'</div></div>'+
+      '<div class="mc"><div class="mc-l">Avg Spend/Lead</div><div class="mc-v cm">'+fmt2(s.avgSpendPerLead)+'</div></div>'+
+      '<div class="mc"><div class="mc-l">Settlements</div><div class="mc-v cm c-pos">'+sd.settledCount+'</div><div class="mc-s">Settled this month</div></div>'+
+      '<div class="mc"><div class="mc-l">Approvals</div><div class="mc-v cm c-pos">'+sd.approvedCount+'</div><div class="mc-s">Decided this month</div></div>'+
+    '</div>'+
+    '<div class="mg mg5">'+
+      '<div class="mc"><div class="mc-l">Declines</div><div class="mc-v cm c-neg">'+sd.declinedCount+'</div><div class="mc-s">Lost this month</div></div>'+
+      '<div class="mc"><div class="mc-l">Not Qualified</div><div class="mc-v cm c-warn">'+s.notQualifiedCount+'</div><div class="mc-s">'+pct(s.notQualifiedRate)+' · closed before submit</div></div>'+
+      '<div class="mc"><div class="mc-l">Success Rate</div><div class="mc-v cm '+(s.successRate>=0.1?"c-pos":"c-warn")+'">'+pct(s.successRate)+'</div><div class="mc-s">Settled / total</div></div>'+
+      '<div class="mc"><div class="mc-l">Approval Rate</div><div class="mc-v cm '+(s.approvalRate>=0.5?"c-pos":"c-warn")+'">'+pct(s.approvalRate)+'</div><div class="mc-s">Approved / submitted</div></div>'+
+      '<div class="mc"><div class="mc-l">Decline Rate</div><div class="mc-v cm '+(s.declineRate>0.4?"c-neg":"c-pos")+'">'+pct(s.declineRate)+'</div><div class="mc-s">Declined / submitted</div></div>'+
+      '<div class="mc"><div class="mc-l">Lost</div><div class="mc-v cm c-neg">'+s.lostCount+'</div></div>'+
+    '</div>'+
+    '<div class="mg mg5">'+
+      '<div class="mc"><div class="mc-l">Commission Settled</div><div class="mc-v cm c-teal">'+fmtFull(sd.commSettled)+'</div><div class="mc-s">Full commission</div></div>'+
+      '<div class="mc"><div class="mc-l">After Split (70%)</div><div class="mc-v cm c-pos">'+fmtFull(sd.commSettled*0.7)+'</div><div class="mc-s">Your take-home</div></div>'+
+      '<div class="mc"><div class="mc-l">Total Settled Value</div><div class="mc-v cm c-pos">'+fmtFull(sd.totalSettledAmt)+'</div></div>'+
+      '<div class="mc"><div class="mc-l">Avg Loan Settled</div><div class="mc-v cm">'+fmtFull(sd.avgLoanAmt)+'</div></div>'+
+      '<div class="mc"><div class="mc-l">Avg Requested</div><div class="mc-v cm">'+fmtFull(s.avgRequested)+'</div></div>'+
+    '</div>';
+  }
+
+  // Breakdown table
+  const rows=sorted.map(ym=>{
+    const s=computeStats(months[ym]);
+    const sd=computeSettlementStats(filteredLeads,ym);
+    return'<tr>'+
+      '<td class="cm" style="font-weight:600">'+monthLabel(ym)+'</td>'+
+      '<td class="cm" style="text-align:right">'+s.total+'</td>'+
+      '<td class="cm" style="text-align:right">'+fmt2(s.totalSpend)+'</td>'+
+      '<td class="cm" style="text-align:right">'+fmt2(s.avgSpendPerLead)+'</td>'+
+      '<td class="cm c-pos" style="text-align:right">'+sd.settledCount+'</td>'+
+      '<td class="cm c-pos" style="text-align:right">'+sd.approvedCount+'</td>'+
+      '<td class="cm c-neg" style="text-align:right">'+sd.declinedCount+'</td>'+
+      '<td class="cm '+(s.successRate>=0.1?"c-pos":"c-warn")+'" style="text-align:right">'+pct(s.successRate)+'</td>'+
+      '<td class="cm '+(s.approvalRate>=0.5?"c-pos":"c-warn")+'" style="text-align:right">'+pct(s.approvalRate)+'</td>'+
+      '<td class="cm '+(s.declineRate>0.4?"c-neg":"c-pos")+'" style="text-align:right">'+pct(s.declineRate)+'</td>'+
+      '<td class="cm c-teal" style="text-align:right">'+fmtFull(sd.commSettled)+'</td>'+
+      '<td class="cm c-pos" style="text-align:right">'+fmtFull(sd.commSettled*0.7)+'</td>'+
+      '<td class="cm" style="text-align:right">'+fmtFull(sd.avgLoanAmt)+'</td>'+
+    '</tr>';
+  }).join("");
+
+  const allS=computeStats(filteredLeads);
+  const allSd=computeSettlementStats(filteredLeads,null);
+  const totRow='<tr class="trow">'+
+    '<td class="cm">ALL TIME</td>'+
+    '<td class="cm" style="text-align:right">'+allS.total+'</td>'+
+    '<td class="cm" style="text-align:right">'+fmt2(allS.totalSpend)+'</td>'+
+    '<td class="cm" style="text-align:right">'+fmt2(allS.avgSpendPerLead)+'</td>'+
+    '<td class="cm c-pos" style="text-align:right">'+allSd.settledCount+'</td>'+
+    '<td class="cm c-pos" style="text-align:right">'+allSd.approvedCount+'</td>'+
+    '<td class="cm c-neg" style="text-align:right">'+allSd.declinedCount+'</td>'+
+    '<td class="cm" style="text-align:right">'+pct(allS.successRate)+'</td>'+
+    '<td class="cm" style="text-align:right">'+pct(allS.approvalRate)+'</td>'+
+    '<td class="cm" style="text-align:right">'+pct(allS.declineRate)+'</td>'+
+    '<td class="cm c-teal" style="text-align:right">'+fmtFull(allSd.commSettled)+'</td>'+
+    '<td class="cm c-pos" style="text-align:right">'+fmtFull(allSd.commSettled*0.7)+'</td>'+
+    '<td class="cm" style="text-align:right">'+fmtFull(allSd.avgLoanAmt)+'</td>'+
+  '</tr>';
+
+  // Build merged stats for the insight box (lead funnel from selStats + settlement-based commission/settlements)
+  const selSd=selM?computeSettlementStats(filteredLeads,selM):null;
+  const insightStats=selStats?Object.assign({},selStats,{commSettled:selSd.commSettled,settledCount:selSd.settledCount,totalSettledAmt:selSd.totalSettledAmt}):allS;
+
+  document.getElementById("sec-monthly").innerHTML=
+  leadTypeFilter()+
+  monthCardsHTML+
+  '<div class="sh" style="margin-top:24px"><h2>Monthly Breakdown'+typeSuffix+'</h2></div>'+
+  '<div class="tw"><div class="ts"><table><thead><tr>'+
+    '<th>Month</th><th style="text-align:right">Leads</th><th style="text-align:right">Spend</th><th style="text-align:right">Avg/Lead</th><th style="text-align:right">Settled</th><th style="text-align:right">Approved</th><th style="text-align:right">Declined</th><th style="text-align:right">Success %</th><th style="text-align:right">Approval %</th><th style="text-align:right">Decline %</th><th style="text-align:right">Comm. Settled</th><th style="text-align:right">After Split</th><th style="text-align:right">Avg Loan</th>'+
+  '</tr></thead><tbody>'+rows+totRow+'</tbody></table></div></div>'+
+  budgetBlock()+
+  insightQuoteBlock(insightStats,QUOTES_MONTHLY);
+}
+
+function rFundOne(){
+  const L=FUNDONE_LEDGER;
+  // Build running balance per month
+  let bal=L.openingBalance;
+  const rows=L.months.map(m=>{
+    const net=(m.income||0)-(m.costs||0)+(m.gstAdj||0);
+    bal+=net;
+    return{label:m.label,income:m.income||0,costs:m.costs||0,gstAdj:m.gstAdj||0,net,bal,notes:m.notes||""};
+  });
+  const currentBalance=bal;
+  const toBreakEven=Math.max(0,-currentBalance);
+  const isOwed=currentBalance<0;
+
+  // Insight
+  let insight;
+  if(currentBalance>=0){
+    insight="You're tracking well. Continued positive months keep building your buffer.";
+  }else{
+    const last=rows[rows.length-1];
+    const lastNet=last?last.net:0;
+    if(lastNet>=0){
+      insight="You're sitting "+fmtFull(currentBalance)+" in the red. Last month you went +"+fmtFull(lastNet)+" — keep that momentum and you'll claw it back. Need to net at least "+fmtFull(toBreakEven)+" next month before any cash actually lands.";
+    }else{
+      insight="You're "+fmtFull(currentBalance)+" in the red. To get back to zero you need to net +"+fmtFull(toBreakEven)+" next month — that means total income (commissions) has to beat total costs (lead spend + bank statements + Equifax + Docusign + adjustments) by that much. Anything less and the hole keeps growing.";
+    }
+  }
+
+  // Latest month breakdown if available
+  const latest=rows[rows.length-1];
+
+  document.getElementById("sec-fundone").innerHTML=
+  '<div class="sh"><h2>FundOne Running Balance</h2><span class="badge">RCTI LEDGER</span></div>'+
+  '<div class="mg mg3">'+
+    '<div class="mc" style="border-color:'+(isOwed?"var(--red)":"var(--green)")+';border-width:2px"><div class="mc-l">Current Balance</div><div class="mc-v cm '+(isOwed?"c-neg":"c-pos")+'" style="font-size:28px">'+fmtFull(currentBalance)+'</div><div class="mc-s">'+(isOwed?"In the red — rolls into next RCTI":"You\'re in the green")+'</div></div>'+
+    '<div class="mc"><div class="mc-l">To Break Even Next Month</div><div class="mc-v cm c-warn" style="font-size:24px">'+(isOwed?"+"+fmtFull(toBreakEven):"$0")+'</div><div class="mc-s">Net you need (income − costs)</div></div>'+
+    '<div class="mc"><div class="mc-l">Opening Balance</div><div class="mc-v cm c-dim">'+fmtFull(L.openingBalance)+'</div><div class="mc-s">Carried in before tracking</div></div>'+
+  '</div>'+
+
+  '<div class="insight"><div class="insight-icon">💡</div><div class="insight-body"><div class="insight-label">What this means</div><div class="insight-text">'+esc(insight)+'</div></div></div>'+
+
+  (latest?'<div class="sh" style="margin-top:24px"><h2>'+esc(latest.label)+' Breakdown</h2></div>'+
+  '<div class="mg mg4">'+
+    '<div class="mc"><div class="mc-l">Income</div><div class="mc-v cm c-pos">'+fmtFull(latest.income)+'</div><div class="mc-s">Settled commissions + insurance</div></div>'+
+    '<div class="mc"><div class="mc-l">Costs</div><div class="mc-v cm c-neg">-'+fmtFull(latest.costs)+'</div><div class="mc-s">Leads + bank stmts + Equifax + Docusign</div></div>'+
+    '<div class="mc"><div class="mc-l">GST / Adjustments</div><div class="mc-v cm c-neg">'+fmtFull(latest.gstAdj)+'</div><div class="mc-s">RCTI adjustments</div></div>'+
+    '<div class="mc"><div class="mc-l">Month Net</div><div class="mc-v cm '+(latest.net<0?"c-neg":"c-pos")+'">'+fmtFull(latest.net)+'</div><div class="mc-s">Change to balance</div></div>'+
+  '</div>':"")+
+
+  '<div class="sh" style="margin-top:24px"><h2>Monthly Ledger</h2></div>'+
+  '<div class="tw"><div class="ts"><table><thead><tr><th>Month</th><th style="text-align:right">Income</th><th style="text-align:right">Costs</th><th style="text-align:right">GST Adj</th><th style="text-align:right">Net</th><th style="text-align:right">Running Balance</th><th>Notes</th></tr></thead><tbody>'+
+  '<tr><td class="cm c-dim">Opening</td><td></td><td></td><td></td><td></td><td class="cm" style="text-align:right">'+fmtFull(L.openingBalance)+'</td><td class="c-dim" style="font-size:11px">Carried in</td></tr>'+
+  rows.map(r=>'<tr><td class="cm" style="font-weight:600">'+esc(r.label)+'</td><td class="cm c-pos" style="text-align:right">'+fmtFull(r.income)+'</td><td class="cm c-neg" style="text-align:right">-'+fmtFull(r.costs)+'</td><td class="cm c-neg" style="text-align:right">'+fmtFull(r.gstAdj)+'</td><td class="cm '+(r.net<0?"c-neg":"c-pos")+'" style="text-align:right">'+fmtFull(r.net)+'</td><td class="cm '+(r.bal<0?"c-neg":"c-pos")+'" style="text-align:right;font-weight:600">'+fmtFull(r.bal)+'</td><td style="font-size:11px;color:var(--dim);max-width:300px;white-space:normal">'+esc(r.notes)+'</td></tr>').join("")+
+  '</tbody></table></div></div>'+
+
+  '<div style="margin-top:14px;padding:12px 16px;background:var(--card);border:1px dashed var(--bdr2);border-radius:8px;font-size:11px;color:var(--mut);line-height:1.6">To add a new month, edit the <code style="color:var(--teal);font-family:\'JetBrains Mono\',monospace">FUNDONE_LEDGER</code> constant near the top of this file. Add a new entry to the <code style="color:var(--teal);font-family:\'JetBrains Mono\',monospace">months</code> array with <code style="color:var(--teal);font-family:\'JetBrains Mono\',monospace">{label, income, costs, gstAdj, notes}</code>.</div>';
+}
+
+function rLosses(){
+  // All-time loss reasons computed from leads
+  const reasons={};let totalLost=0;
+  D.leads.forEach(l=>{if((l.finalStatus==="Lost"||l.currentStage==="Lost")&&l.lostReason){reasons[l.lostReason]=(reasons[l.lostReason]||0)+1;totalLost++;}});
+  const sorted=Object.entries(reasons).sort((a,b)=>b[1]-a[1]);
+
+  // Monthly loss breakdown
+  const monthLosses={};
+  D.leads.forEach(l=>{if((l.finalStatus==="Lost"||l.currentStage==="Lost")&&l.lostReason&&l.month){if(!monthLosses[l.month])monthLosses[l.month]={};monthLosses[l.month][l.lostReason]=(monthLosses[l.month][l.lostReason]||0)+1;}});
+  const monthKeys=Object.keys(monthLosses).sort();
+
+  const allTimeRows=sorted.map(([r,c])=>'<tr><td>'+esc(r)+'</td><td class="cm" style="text-align:right">'+c+'</td><td class="cm" style="text-align:right">'+pct(totalLost>0?c/totalLost:0)+'</td></tr>').join("");
+
+  const monthRows=monthKeys.map(ym=>{
+    const ml=monthLosses[ym];
+    const total=Object.values(ml).reduce((s,v)=>s+v,0);
+    const top=Object.entries(ml).sort((a,b)=>b[1]-a[1]);
+    const topStr=top.map(([r,c])=>esc(r)+' ('+c+')').join(', ');
+    return'<tr><td class="cm" style="font-weight:600">'+monthLabel(ym)+'</td><td class="cm" style="text-align:right">'+total+'</td><td style="font-size:12px;color:var(--dim)">'+topStr+'</td></tr>';
+  }).join("");
+
+  document.getElementById("sec-losses").innerHTML=
+  '<div class="mg mg2">'+
+    '<div><div class="sh"><h2>All Time Loss Reasons</h2><span class="badge">'+totalLost+' LOST</span></div>'+
+    '<div class="tw"><div class="ts"><table><thead><tr><th>Reason</th><th style="text-align:right">Count</th><th style="text-align:right">%</th></tr></thead><tbody>'+allTimeRows+'</tbody></table></div></div></div>'+
+    '<div><div class="sh"><h2>Losses by Month</h2></div>'+
+    '<div class="tw"><div class="ts"><table><thead><tr><th>Month</th><th style="text-align:right">Lost</th><th>Reasons</th></tr></thead><tbody>'+monthRows+'</tbody></table></div></div></div>'+
+  '</div>';
+}
+
+function rLeads(){
+  const rows=D.leads.map(l=>{
+    const sc=l.currentStage==="Settled"?"c-pos":l.currentStage==="Lost"?"c-neg":l.currentStage==="Approved"?"c-pos":"c-warn";
+    return'<tr><td class="cm">'+esc(l.id)+'</td><td class="cm">'+sDate(l.date)+'</td><td>'+esc(l.business)+'</td><td>'+esc(l.source)+'</td><td>'+esc(l.product)+'</td><td class="cm" style="text-align:right">'+fmtFull(l.requestedAmt)+'</td><td class="cm" style="text-align:right">'+fmt2(l.cost)+'</td><td style="color:var(--dim)">'+esc(l.outcome)+'</td><td class="'+sc+'">'+esc(l.currentStage)+'</td></tr>';
+  }).join("");
+  document.getElementById("sec-leads").innerHTML=
+  '<div class="sh"><h2>Leads Log</h2><span class="badge">'+D.leads.length+' LEADS</span></div>'+
+  '<div class="tw"><div class="ts"><table><thead><tr><th>ID</th><th>Date</th><th>Business</th><th>Source</th><th>Product</th><th style="text-align:right">Requested</th><th style="text-align:right">Lead Cost</th><th>Outcome</th><th>Stage</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+
+function exportXLSX(){
+  if(!D)return;const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(D.leads.map(l=>({ID:l.id,Date:l.date,Business:l.business,Source:l.source,Product:l.product,Requested:l.requestedAmt,"Lead Cost":l.cost,Outcome:l.outcome,Stage:l.currentStage,"Settled Amt":l.settledAmt,Commission:l.commTotal,"Lost Reason":l.lostReason}))),"Leads");
+  // Monthly stats
+  const months={};D.leads.forEach(l=>{const m=l.month;if(!m)return;if(!months[m])months[m]=[];months[m].push(l);});
+  const mStats=Object.keys(months).sort().map(ym=>{const s=computeStats(months[ym]);const sd=computeSettlementStats(D.leads,ym);return{Month:monthLabel(ym),Leads:s.total,Spend:s.totalSpend,"Avg/Lead":s.avgSpendPerLead,Settled:sd.settledCount,Approved:sd.approvedCount,Declined:sd.declinedCount,"Success%":s.successRate,"Approval%":s.approvalRate,"Decline%":s.declineRate,"Comm Settled":sd.commSettled,"After Split":sd.commSettled*0.7,"Avg Loan":sd.avgLoanAmt};});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mStats),"Monthly");
+  XLSX.writeFile(wb,"Broker_HUB_Export.xlsx");
+}
+
+renderTabs();
+if(SCRIPT_URL){document.getElementById("setupBox").style.display="none";startRefresh();refreshData();}
+else{document.getElementById("setupBox").style.display="block";document.getElementById("loadMsg").textContent="Connect above";}
+</script>
+
+<script>
+// Demo auto-init
+window.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    if(typeof refreshData==='function'){refreshData();startRefresh&&startRefresh();}
+  }, 100);
+});
+</script>
+</body>
+</html>
