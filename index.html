@@ -190,6 +190,11 @@ tbody tr:hover{background:var(--card2)}
 .setup-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .setup input{flex:1;min-width:250px;border-radius:8px;border:1px solid var(--bdr2);background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospace;font-size:12px;padding:10px 14px;outline:none}
 @media(max-width:768px){.app{padding:14px 12px}.mg5,.mg4{grid-template-columns:1fr 1fr}.mc-v{font-size:17px}}
+
+.hist-chart{padding:12px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--bdr2);border-radius:10px}
+.hist-title{font-size:13px;color:var(--dim);font-weight:600;margin-bottom:8px;letter-spacing:0.3px;text-transform:uppercase}
+.hist-badge{display:inline-block;background:rgba(20,184,166,0.15);color:var(--teal);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px}
+body.light .hist-chart{background:rgba(0,0,0,0.02)}
 &lt;/style&gt;
 
 &lt;style id=&quot;theme-vars&quot;&gt;
@@ -703,6 +708,123 @@ function velocityCards(leads){
   '&lt;/div&gt;';
 }
 
+
+
+// ═══ HISTORY CHARTS — weekly lines: settlements count + take-home commission ═══
+function historyChartsBlock(leads){
+  if(!leads||!leads.length)return'';
+
+  function parseAnyDate(s){
+    if(!s)return null;
+    const parts=String(s).split(/[\/\-]/);
+    if(parts.length===3){
+      let[d,m,y]=parts.map(x=&gt;parseInt(x));
+      if(y&lt;100)y+=2000;
+      const dt=new Date(y,m-1,d);
+      return isNaN(dt)?null:dt;
+    }
+    return null;
+  }
+
+  let earliest=null,latest=new Date();
+  leads.forEach(l=&gt;{
+    const dt=parseAnyDate(l.date);
+    if(dt&amp;&amp;(!earliest||dt&lt;earliest))earliest=dt;
+  });
+  if(!earliest)return'';
+
+  const weekStart=d=&gt;{
+    const x=new Date(d);
+    const day=x.getDay()||7;
+    x.setDate(x.getDate()-(day-1));
+    x.setHours(0,0,0,0);
+    return x;
+  };
+  const startWeek=weekStart(earliest);
+  const endWeek=weekStart(latest);
+
+  const weeks=[];
+  const cursor=new Date(startWeek);
+  while(cursor&lt;=endWeek&amp;&amp;weeks.length&lt;200){
+    weeks.push(new Date(cursor));
+    cursor.setDate(cursor.getDate()+7);
+  }
+  if(!weeks.length)return'';
+
+  const settlePerWeek=new Array(weeks.length).fill(0);
+  const commPerWeek=new Array(weeks.length).fill(0);
+  const weekIndex=dt=&gt;{
+    const wks=Math.floor((dt-startWeek)/(7*86400000));
+    return(wks&gt;=0&amp;&amp;wks&lt;weeks.length)?wks:-1;
+  };
+  leads.forEach(l=&gt;{
+    if((l.finalStatus==='Settled'||l.currentStage==='Settled')&amp;&amp;l.settleDate){
+      const dt=parseAnyDate(l.settleDate);
+      if(dt){
+        const i=weekIndex(dt);
+        if(i&gt;=0){
+          settlePerWeek[i]+=1;
+          commPerWeek[i]+=(l.commTotal||0)*0.7;
+        }
+      }
+    }
+  });
+
+  const totalSettled=settlePerWeek.reduce((a,b)=&gt;a+b,0);
+  const totalIncome=commPerWeek.reduce((a,b)=&gt;a+b,0);
+  const settleData=weeks.map((w,i)=&gt;({week:w,value:settlePerWeek[i]}));
+  const incomeData=weeks.map((w,i)=&gt;({week:w,value:Math.round(commPerWeek[i]*100)/100}));
+
+  const monNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const weekLabel=d=&gt;d.getDate()+' '+monNames[d.getMonth()];
+  const weekFull=d=&gt;d.getDate()+' '+monNames[d.getMonth()]+' '+d.getFullYear();
+
+  function lineChart(data,title,badge,color,fmt){
+    if(!data.length)return'';
+    const w=800,h=200,pL=55,pR=14,pT=14,pB=32;
+    const iw=w-pL-pR,ih=h-pT-pB;
+    const max=Math.max(1,...data.map(d=&gt;d.value));
+    const xAt=i=&gt;pL+(data.length&lt;2?iw/2:i*iw/(data.length-1));
+    const yAt=v=&gt;pT+ih-(v/max)*ih;
+
+    let path='M '+xAt(0)+' '+yAt(data[0].value);
+    for(let i=1;i&lt;data.length;i++){
+      const x0=xAt(i-1),y0=yAt(data[i-1].value);
+      const x1=xAt(i),y1=yAt(data[i].value);
+      const cx=(x0+x1)/2;
+      path+=' C '+cx+' '+y0+', '+cx+' '+y1+', '+x1+' '+y1;
+    }
+    const areaPath=path+' L '+xAt(data.length-1)+' '+yAt(0)+' L '+xAt(0)+' '+yAt(0)+' Z';
+
+    const baseY=yAt(0);
+    const baseline='&lt;line x1=&quot;'+pL+'&quot; x2=&quot;'+(pL+iw)+'&quot; y1=&quot;'+baseY+'&quot; y2=&quot;'+baseY+'&quot; stroke=&quot;var(--bdr2)&quot; stroke-dasharray=&quot;2 3&quot; opacity=&quot;0.5&quot;/&gt;';
+
+    const yTicks=[0,max/2,max].map(v=&gt;
+      '&lt;text x=&quot;'+(pL-8)+'&quot; y=&quot;'+(yAt(v)+4)+'&quot; font-size=&quot;10&quot; fill=&quot;var(--dim)&quot; text-anchor=&quot;end&quot;&gt;'+fmt(v)+'&lt;/text&gt;'
+    ).join('');
+
+    const step=Math.max(1,Math.ceil(data.length/8));
+    const xTicks=data.map((d,i)=&gt;i%step===0||i===data.length-1?
+      '&lt;text x=&quot;'+xAt(i)+'&quot; y=&quot;'+(h-10)+'&quot; font-size=&quot;10&quot; fill=&quot;var(--dim)&quot; text-anchor=&quot;middle&quot;&gt;'+weekLabel(d.week)+'&lt;/text&gt;':''
+    ).join('');
+
+    const dots=data.map((d,i)=&gt;
+      '&lt;circle cx=&quot;'+xAt(i)+'&quot; cy=&quot;'+yAt(d.value)+'&quot; r=&quot;3.5&quot; fill=&quot;'+color+'&quot; opacity=&quot;0.9&quot;&gt;&lt;title&gt;Week of '+weekFull(d.week)+': '+fmt(d.value)+'&lt;/title&gt;&lt;/circle&gt;'
+    ).join('');
+
+    const area='&lt;path d=&quot;'+areaPath+'&quot; fill=&quot;'+color+'&quot; opacity=&quot;0.12&quot;/&gt;';
+    const line='&lt;path d=&quot;'+path+'&quot; fill=&quot;none&quot; stroke=&quot;'+color+'&quot; stroke-width=&quot;2.5&quot; stroke-linejoin=&quot;round&quot; stroke-linecap=&quot;round&quot;/&gt;';
+
+    return'&lt;div class=&quot;hist-chart&quot;&gt;&lt;div class=&quot;hist-title&quot;&gt;'+title+(badge?' &lt;span class=&quot;hist-badge&quot;&gt;'+badge+'&lt;/span&gt;':'')+'&lt;/div&gt;&lt;svg viewBox=&quot;0 0 '+w+' '+h+'&quot; preserveAspectRatio=&quot;none&quot; style=&quot;width:100%;height:200px&quot;&gt;'+baseline+yTicks+area+line+dots+xTicks+'&lt;/svg&gt;&lt;/div&gt;';
+  }
+
+  return'&lt;div class=&quot;sh&quot; style=&quot;margin-top:20px;padding:18px 16px 8px&quot;&gt;&lt;h2 style=&quot;font-size:16px;margin-bottom:4px&quot;&gt;History&lt;/h2&gt;&lt;span class=&quot;badge&quot; style=&quot;font-size:10px&quot;&gt;WEEKLY · FIRST LEAD TO NOW&lt;/span&gt;'
+    +'&lt;div style=&quot;display:flex;flex-direction:column;gap:16px;margin-top:14px&quot;&gt;'
+    +lineChart(settleData,'Settlements per week',totalSettled+' total','var(--pos)',v=&gt;Math.round(v).toString())
+    +lineChart(incomeData,'Take-home commission per week (after 70% split)','$'+Math.round(totalIncome).toLocaleString()+' total','var(--teal)',v=&gt;Math.abs(v)&gt;=1000?'$'+(v/1000).toFixed(1)+'k':'$'+Math.round(v))
+    +'&lt;/div&gt;&lt;/div&gt;';
+}
+
 function statsCards(s,label){
   return'&lt;div class=&quot;sh&quot;&gt;&lt;h2&gt;'+label+'&lt;/h2&gt;&lt;span class=&quot;badge&quot;&gt;'+s.total+' LEADS&lt;/span&gt;&lt;/div&gt;'+
   '&lt;div class=&quot;mg mg5&quot;&gt;'+
@@ -760,7 +882,7 @@ function rAllTime(){
   const filtered=filterLeadsByType(D.leads,window._leadTypeFilter);
   const s=computeStats(filtered);
   const lbl=window._leadTypeFilter===&quot;All&quot;?&quot;All Time Performance&quot;:&quot;All Time · &quot;+window._leadTypeFilter+&quot; Leads&quot;;
-  document.getElementById(&quot;sec-alltime&quot;).innerHTML=leadTypeFilter()+statsCards(s,lbl)+velocityCards(filtered)+budgetBlock()+insightQuoteBlock(s,QUOTES_ALLTIME);
+  document.getElementById(&quot;sec-alltime&quot;).innerHTML=leadTypeFilter()+statsCards(s,lbl)+velocityCards(filtered)+budgetBlock()+historyChartsBlock(filtered)+insightQuoteBlock(s,QUOTES_ALLTIME);
 }
 
 function rMonthly(){
