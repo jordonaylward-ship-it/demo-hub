@@ -2438,16 +2438,41 @@ function doExtract(){
   const country=g([/(Australia|New Zealand)/i])||'Australia';
 
   // Citizenship &amp; marital
-  // Citizenship — look for the value near explicit citizenship labels, prefer value-before-label Zink format
-  let citizen=g([
-    /(Citizen|Permanent Resident|Resident|Visa)\s*\n\s*Australian Citizen/i,  // Zink: value\nlabel
-    /Australian Citizen\s*\n\s*(Citizen|Permanent Resident|Resident|Visa)/i,   // Alt: label\nvalue
-    /Citizenship\s*\*?\s*\n?\s*(Citizen|Permanent Resident|Resident|Visa)/i   // PDF: Citizenship Citizen
-  ])||'Unknown';
-  const marital=g([
-    /Marital Status\s*\*?\s*\n?\s*(Single|Married|De[ -]?facto|Separated|Divorced|Widowed)/i,  // PDF: label then value
-    /(Single|Married|De[ -]?facto|Separated|Divorced|Widowed)\s*\n\s*Marital Status/i  // Zink: value then label
-  ])||'';
+  // Citizenship — handle multiple layouts robustly
+  let citizen='Unknown';
+  // Try Zink format first: value immediately before &quot;Australian Citizen&quot; label
+  const zinkCitMatch=raw.match(/\b(Citizen|Permanent Resident|Resident)\s*\n\s*Australian Citizen/i);
+  if(zinkCitMatch){citizen=zinkCitMatch[1];}
+  else{
+    // PDF format: &quot;Citizenship&quot; label somewhere, then value &quot;Citizen&quot; appears later
+    // Search the window after &quot;Citizenship&quot; label, skipping &quot;Australian Citizen&quot; false-matches
+    const citzIdx=raw.search(/\bCitizenship\b/i);
+    if(citzIdx&gt;=0){
+      // Skip past &quot;Australian Citizen&quot; label if it appears (Zink has this)
+      const windowStart=citzIdx+'Citizenship'.length;
+      const windowEnd=Math.min(windowStart+250,raw.length);
+      let scope=raw.substring(windowStart,windowEnd).replace(/Australian\s+Citizen/gi,'');
+      const valMatch=scope.match(/\b(Citizen|Permanent Resident|PR\b|Temporary Resident|Visa Holder|Visa)\b/i);
+      if(valMatch){citizen=valMatch[1];}
+    }
+  }
+  // Final fallback: any standalone &quot;Australian Citizen:\s*Citizen&quot; pattern
+  if(citizen==='Unknown'){
+    const fallback=raw.match(/Australian Citizen[^\n]{0,5}\s*(Citizen|Permanent Resident|Visa)/i);
+    if(fallback)citizen=fallback[1];
+  }
+  // Marital Status — handle both orders
+  let marital='';
+  const zinkMar=raw.match(/\b(Single|Married|De[ -]?facto|Separated|Divorced|Widowed)\s*\n\s*Marital Status/i);
+  if(zinkMar){marital=zinkMar[1];}
+  else{
+    const marIdx=raw.search(/Marital\s+Status/i);
+    if(marIdx&gt;=0){
+      const scope=raw.substring(marIdx+'Marital Status'.length,marIdx+200);
+      const valMatch=scope.match(/\b(Single|Married|De[ -]?facto|Separated|Divorced|Widowed)\b/i);
+      if(valMatch){marital=valMatch[1];}
+    }
+  }
   const dependants=gn([/Number of Dependants[^\n]*?\)[^0-9]*(\d+)/i,/Number of Dependants[^\n]*\n\s*(\d+)/i])||0;
 
   // License — keep type/state/expiry, redact numbers
@@ -2456,7 +2481,18 @@ function doExtract(){
   const licExpiry=g([/(?:License|Card).*?Expiry Date\s*\n?\s*([0-9\/\-]+)/i])||g([/Expiry Date\s*\n?\s*([0-9\/\-]+)/i])||'';
 
   // Employment — KEEP all
-  const empType=g([/(Full Time|Part Time|Casual|Self[- ]?Employed|Contract|Permanent|Temporary)\s*\n\s*Type/i,/Type\s*\n?\s*(Full Time|Part Time|Casual|Self[- ]?Employed|Contract)/i])||'';
+  // Employment Type — PDF has &quot;Employment Status\nFull Time&quot;, Zink has value-first
+  let empType='';
+  const empZinkType=raw.match(/\b(Full Time|Part Time|Casual|Self[- ]?Employed|Contract|Permanent|Temporary)\s*\n\s*Type/i);
+  if(empZinkType){empType=empZinkType[1];}
+  else{
+    const empStatusMatch=raw.match(/Employment Status[\s\S]{0,150}?\b(Full Time|Part Time|Casual|Self[- ]?Employed|Contract|Permanent|Temporary)\b/i);
+    if(empStatusMatch){empType=empStatusMatch[1];}
+    else{
+      const typeMatch=raw.match(/\bType\s*\n?\s*(Full Time|Part Time|Casual|Self[- ]?Employed|Contract)/i);
+      if(typeMatch){empType=typeMatch[1];}
+    }
+  }
   // Scope tenure search to CURRENT EMPLOYMENT section (PDF has values in tabular format)
   let empYears=0,empMonths=0;
   const empSection=raw.match(/CURRENT EMPLOYMENT[\s\S]{0,600}?(\d+)\s*yrs?\s*(\d+)\s*mths?/i);
