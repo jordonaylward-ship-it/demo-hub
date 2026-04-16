@@ -2516,24 +2516,42 @@ function doExtract(){
   const empABN=g([/ABN\s*\n?\s*(\d{11}|\d{2}\s\d{3}\s\d{3}\s\d{3})/i])||'';
 
   // Income — KEEP all
-  // Try multiple patterns in priority order:
-  // 1. Zink: &quot;Net Income (After tax) * $ 1301.12&quot;
-  // 2. PDF: &quot;Salary/Wages $5199.60&quot; (monthly equivalent)
-  // 3. PDF: &quot;Total Income $10182.55 per month&quot;
-  let netIncome=gn([/Net Income[^$]*\$\s*\n?\s*([0-9,.]+)/i]);
-  let incomeSource='';
-  if(netIncome){incomeSource='weekly (Zink Net Income)';}
-  else{
-    const salary=gn([/Salary\/Wages\s*\$\s*([0-9,.]+)/i,/Salary\s*\$\s*([0-9,.]+)/i]);
-    if(salary){netIncome=salary;incomeSource='monthly (PDF Salary/Wages)';}
+  // Income extraction — try Zink, then PDF fallbacks
+  let netIncome=null,netIncomeMonthly=null,incomeFreq='',incomeSource='';
+  
+  // Zink: &quot;Net Income (After tax) * $ 1301.12\n$5,637.75/m\nWeekly&quot;
+  // Captures weekly amount AND monthly equivalent in one match
+  const zinkIncome=raw.match(/Net Income[^$]*\$\s*\n?\s*([0-9,.]+)[\s\S]*?\$([0-9,.]+)\s*\/\s*m[\s\S]{0,20}?(Weekly|Fortnightly|Monthly|Annually)/i);
+  if(zinkIncome){
+    netIncome=parseFloat(zinkIncome[1].replace(/,/g,''));
+    netIncomeMonthly=parseFloat(zinkIncome[2].replace(/,/g,''));
+    incomeFreq=zinkIncome[3];
+    incomeSource='Zink applicant';
+  }else{
+    // Simpler Zink: just amount + frequency
+    const simpleZink=raw.match(/Net Income[^$]*\$\s*\n?\s*([0-9,.]+)[\s\S]{0,80}?(Weekly|Fortnightly|Monthly|Annually)/i);
+    if(simpleZink){
+      netIncome=parseFloat(simpleZink[1].replace(/,/g,''));
+      incomeFreq=simpleZink[2];
+      incomeSource='Zink applicant';
+    }else{
+      // PDF: &quot;Salary/Wages $5199.60&quot; (already monthly)
+      const pdfSalary=raw.match(/Salary\/Wages\s*\$\s*([0-9,.]+)/i);
+      if(pdfSalary){
+        netIncome=parseFloat(pdfSalary[1].replace(/,/g,''));
+        incomeFreq='Monthly';
+        netIncomeMonthly=netIncome;
+        incomeSource='PDF Salary/Wages (monthly)';
+      }
+    }
   }
-  // Frequency — look within 100 chars of Net Income
-  const freqMatch=raw.match(/Net Income[\s\S]{0,100}?\$[\s\S]{0,30}?(Weekly|Fortnightly|Monthly|Annually)/i)
-                ||raw.match(/([0-9,.]+)\s*(Weekly|Fortnightly|Monthly)\s*\n\s*Frequency/i);
-  let incomeFreq='';
-  if(freqMatch){incomeFreq=freqMatch[freqMatch.length-1];}
-  // Override if we got it from PDF monthly source
-  if(incomeSource.startsWith('monthly')){incomeFreq='Monthly';}
+  // If we have weekly amount but no monthly, calculate it (52/12)
+  if(netIncome&amp;&amp;incomeFreq==='Weekly'&amp;&amp;!netIncomeMonthly){
+    netIncomeMonthly=Math.round(netIncome*52/12*100)/100;
+  }
+  if(netIncome&amp;&amp;incomeFreq==='Fortnightly'&amp;&amp;!netIncomeMonthly){
+    netIncomeMonthly=Math.round(netIncome*26/12*100)/100;
+  }
 
   // Living
   let livingType=g([/(Boarded|Boarding|Renting|Rent|Mortgage|Own\w*)\s*\n\s*Ownership/i,/Ownership\s*\*?\s*\n?\s*(Rent|Mortgage|Board\w*|Own\w*|Boarding)/i])||'Unknown';
@@ -2624,11 +2642,14 @@ function doExtract(){
 
   out+='INCOME\n';
   if(netIncome){
-    out+='  Net Income: $'+netIncome.toLocaleString()+(incomeFreq?' '+incomeFreq:'')+(incomeSource?' ('+incomeSource+')':'')+'\n';
+    out+='  Applicant Net Income: $'+netIncome.toLocaleString()+(incomeFreq?' '+incomeFreq:'')+(incomeSource?' ['+incomeSource+']':'')+'\n';
+    if(netIncomeMonthly&amp;&amp;incomeFreq!=='Monthly'){
+      out+='  Applicant Monthly Equivalent: $'+netIncomeMonthly.toLocaleString()+'/month\n';
+    }
   }else{
-    out+='  Net Income: Not captured\n';
+    out+='  Applicant Net Income: Not captured\n';
   }
-  if(totalIncMonth)out+='  Total Monthly Income (calculated): $'+totalIncMonth+' per month\n';
+  if(totalIncMonth)out+='  Total Household Monthly Income (applicant + spouse): $'+totalIncMonth+'/month\n';
   out+='\n';
 
   out+='LIVING\n';
@@ -2776,8 +2797,10 @@ ABSOLUTELY DO NOT FLAG ANY OF THESE AS RED FLAGS:
 HALLUCINATION RULES — READ CAREFULLY:
 - The &quot;FHI / Financial Hardship Information on file&quot; line shows the EXACT value. If it says &quot;NO&quot;, there is NO FHI. DO NOT flag FHI as a red flag. DO NOT mention FHI in the credit snapshot except to confirm &quot;no FHI&quot;. Flagging FHI when the data says NO is a critical error.
 - If Employment Tenure shows a value like &quot;10m&quot; or &quot;0y 10m&quot;, that's the confirmed tenure — REPORT IT, don't say &quot;not captured&quot;.
-- If Income is shown with a source label like &quot;$5,199 Monthly (PDF Salary/Wages)&quot; — that's the CONFIRMED monthly income. Don't say frequency is unclear.
-- If Total Monthly Income is also provided (calculated), treat that as the authoritative monthly figure. Don't flag income as uncertain when it's explicitly stated.
+- If Applicant Net Income is shown with a frequency like &quot;$1,301.12 Weekly&quot; — that's the CONFIRMED income and frequency. NEVER say frequency is unclear when it's explicitly labeled.
+- If &quot;Applicant Monthly Equivalent&quot; is shown, that's the authoritative monthly figure for the APPLICANT ONLY.
+- &quot;Total Household Monthly Income (applicant + spouse)&quot; is the COMBINED household figure. Do NOT confuse this with the applicant's own income. When assessing serviceability, use the applicant's figure unless the spouse is a co-applicant.
+- DO NOT flag income as inconsistent when both weekly and monthly equivalent are provided — they are meant to match (weekly × 52/12).
 - Citizenship and Marital Status are SEPARATE fields. If you see &quot;Citizenship: Citizen&quot; and &quot;Marital Status: De-facto&quot;, treat them as separate. Never say &quot;Citizenship: De-facto&quot; — De-facto is NEVER a citizenship status.
 - If the data says &quot;Hardship: No&quot; or doesn't mention hardship — DO NOT say FHI is on file. Only flag FHI if the data explicitly says &quot;Yes&quot;, &quot;Active&quot;, or &quot;FHI Flagged&quot;.
 - If employment tenure shows &quot;4m&quot; or &quot;0y 4m&quot;, the person has 4 MONTHS tenure, not 0 months. Parse the full value.
