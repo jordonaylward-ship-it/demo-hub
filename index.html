@@ -1708,14 +1708,124 @@ confirm:&quot;Done. You'll hear from me within the hour. Anything you want to as
 ];
 
 const OBJECTIONS=[
-{trigger:&quot;Rate seems high&quot;,response:&quot;Fair. When you say high — is it the budget genuinely not stretching, or is it more that you're not sure the deal's right yet?&quot;,followUp:&quot;Diagnose, don't defend.&quot;},
-{trigger:&quot;I need to think&quot;,response:&quot;Course. Usually that's one of two things — you need more info, or something's not sitting right.&quot;,followUp:&quot;Which one is it?&quot;},
-{trigger:&quot;Declined before&quot;,response:&quot;Honestly that helps me. Now I know what didn't work I can go straight to the lenders that handle it.&quot;,followUp:&quot;Was it credit, income, or the asset?&quot;},
-{trigger:&quot;Talk to my partner&quot;,response:&quot;Yeah of course — never make a finance call solo. I'll send a one-pager tonight so you can walk through it together.&quot;,followUp:&quot;Morning or arvo for a quick follow-up tomorrow?&quot;},
-{trigger:&quot;Another broker quoted lower&quot;,response:&quot;Have they submitted it to a lender yet, or is it just a number off a calculator? Anyone can type numbers in. Real question is whether the lender honours it.&quot;,followUp:&quot;What matters more — the lowest quote or the one that actually settles?&quot;},
-{trigger:&quot;Just send me something&quot;,response:&quot;Easy. One thing though — if the numbers stack up the way I think they will, are you ready to move this week or are we a few weeks out?&quot;,followUp:&quot;Filters tyre-kickers from buyers.&quot;},
-{trigger:&quot;Going cold (negative reverse)&quot;,response:&quot;Look, I'm getting the feeling this might not be the right time, and that's totally fine. No hard feelings.&quot;,followUp:&quot;Am I reading that right?&quot;},
+// ═══ TIER 1: EVERY WEEK ═══
+{trigger:&quot;I need to think about it&quot;,tier:&quot;🔥&quot;,tone:&quot;Calm. Non-defensive. PAUSE after the question.&quot;,
+steps:[
+{say:&quot;Of course. Usually when someone says that it's one of two things — they need more info from me, or something doesn't feel right yet.&quot;,they:&quot;Yeah...&quot;},
+{say:&quot;Which one is it for you — time or information? Because if it's info I'd rather answer it now than have you stewing on it.&quot;,they:&quot;It's just a big decision / I'm not sure about the rate / etc&quot;,note:&quot;Now you know the real objection. Address THAT, not the stall.&quot;}
+]},
+{trigger:&quot;I need to talk to my partner&quot;,tier:&quot;🔥&quot;,tone:&quot;Supportive. Never challenge this — it's respect, not a stall.&quot;,
+steps:[
+{say:&quot;Of course — you definitely should. Never make a finance call solo.&quot;,they:&quot;Yeah&quot;},
+{say:&quot;I'll send you a one-pager tonight with the full structure, repayments, and next steps so you can walk through it together. Would a quick follow-up work better morning or arvo tomorrow?&quot;,note:&quot;Keeps momentum. The one-pager does the selling for you while you're not in the room.&quot;}
+]},
+{trigger:&quot;Your rate's too high&quot;,tier:&quot;🔥&quot;,tone:&quot;Steady. Don't flinch or immediately offer to sharpen it.&quot;,
+steps:[
+{say:&quot;When you say too high — is it that the repayment genuinely doesn't fit your budget, or is it more that you're not sure the deal's right for you?&quot;,they:&quot;Budget → go to repayment objection. Value → continue:&quot;,note:&quot;Diagnose first. These are two completely different problems.&quot;},
+{say:&quot;The rate I've quoted matches your actual profile. If I take you to a lender with a sharper headline rate there's a real chance they decline you, and now you've got a hit on your file for nothing.&quot;,note:&quot;You're not defending — you're protecting them.&quot;}
+]},
+{trigger:&quot;The repayments are too high&quot;,tier:&quot;🔥&quot;,tone:&quot;Problem-solving mode. Collaborative, not defensive.&quot;,
+steps:[
+{say:&quot;Okay, let's work backwards. What repayment would you need it to sit at for this to work?&quot;,they:&quot;$X per week / fortnight&quot;,note:&quot;Now you have a target number to engineer towards.&quot;},
+{say:&quot;I've got a few ways to get there — longer term, smaller amount financed, different lender structure. Let's find the number that fits rather than walking away from the whole thing.&quot;,note:&quot;Shows flexibility. You're solving WITH them.&quot;}
+]},
+{trigger:&quot;Another broker quoted me lower&quot;,tier:&quot;🔥&quot;,tone:&quot;Calm. Zero defensiveness. PAUSE after each question.&quot;,
+steps:[
+{say:&quot;I hear you — and there's nothing wrong with comparing brokers. Do you mind if I ask a quick question?&quot;,they:&quot;Yeah go ahead&quot;},
+{say:&quot;Have they actually assessed your full application yet — income documents, credit file, vehicle details — and had it workshopped with the lender? Or is it more of an indicative quote at this stage?&quot;,they:&quot;No, not that far / They sounded confident&quot;,note:&quot;Let them answer fully. Don't interrupt.&quot;},
+{say:&quot;Got it. The tricky part is a lot of quotes are best-case numbers before the lender has seen everything. What I've built here is based on your actual situation and what the lender will realistically approve.&quot;,they:&quot;Okay / yeah&quot;},
+{say:&quot;So the question is: what's more important to you — the lowest quoted rate on paper, or choosing the option we know the lender will approve with the structure you want?&quot;,they:&quot;If lowest rate → 'No worries, we can try for it, but I'll be upfront if the lender won't accept the conditions.' If certainty → 'Great — let's continue.'&quot;,note:&quot;PAUSE. Let them choose. Don't push.&quot;}
+]},
+{trigger:&quot;My mate got a better deal&quot;,tier:&quot;🔥&quot;,tone:&quot;Relaxed. Don't get drawn into comparing blind.&quot;,
+steps:[
+{say:&quot;Could be — every deal is different though. Their credit score, deposit, income, employment type, the asset — all of it changes the rate.&quot;,they:&quot;Yeah but still...&quot;},
+{say:&quot;What I can promise you is this is the best deal available for YOUR file right now. If I could get you lower I would, because I'd rather you refer me to ten mates than save myself the phone call.&quot;,note:&quot;Shift from comparison to trust.&quot;}
+]},
+{trigger:&quot;I'm just shopping around&quot;,tier:&quot;🔥&quot;,tone:&quot;Relaxed. Don't chase — qualify.&quot;,
+steps:[
+{say:&quot;Totally fair. Most people do. Can I ask though — what would make you stop shopping and actually move?&quot;,they:&quot;If the rate was X / If I felt confident / etc&quot;,note:&quot;Whatever they say IS their buying criteria. Now sell to that.&quot;},
+{say:&quot;If I can tick that box right now, there's no point dragging it out. Let me show you what I've got.&quot;,note:&quot;Urgency without pressure.&quot;}
+]},
+{trigger:&quot;Can you just send me something to look at&quot;,tier:&quot;🔥&quot;,tone:&quot;Easy-going but qualifying.&quot;,
+steps:[
+{say:&quot;Easy done. One thing though — if the numbers stack up the way I think they will, are you ready to move this week or are we a few weeks out?&quot;,they:&quot;This week / Not sure yet&quot;,note:&quot;Separates buyers from tyre-kickers. If they say 'this week' — chase the lender hard. If 'not sure' — nurture sequence.&quot;}
+]},
+// ═══ TIER 2: WEEKLY BUT LESS FREQUENT ═══
+{trigger:&quot;I don't want to affect my credit score&quot;,tier:&quot;⚡&quot;,tone:&quot;Confident. This is your strongest value prop.&quot;,
+steps:[
+{say:&quot;That's actually exactly why you should be using me. If you go applying at three or four places yourself, that's three or four enquiries on your file in a week and lenders see that and panic.&quot;,they:&quot;Right...&quot;},
+{say:&quot;I do one submission to the right lender. One enquiry. That's it. Your file stays clean.&quot;,note:&quot;Simple. Powerful. Let it land.&quot;}
+]},
+{trigger:&quot;I got declined before so I'm nervous&quot;,tier:&quot;⚡&quot;,tone:&quot;Positive. Reframe the decline as useful intel.&quot;,
+steps:[
+{say:&quot;Honestly that helps me. Now I know what didn't work, I can go straight to lenders that specialise in exactly that.&quot;,they:&quot;Okay&quot;},
+{say:&quot;Do you remember if it was credit, income, or the asset that was the issue?&quot;,note:&quot;Gets the diagnostic info AND shows you know what you're doing.&quot;}
+]},
+{trigger:&quot;Not ready / scared to commit&quot;,tier:&quot;⚡&quot;,tone:&quot;Reassuring. PAUSE. Let them breathe.&quot;,
+steps:[
+{say:&quot;Totally normal. Most people don't feel 100% ready when making financial decisions.&quot;,they:&quot;Yeah&quot;},
+{say:&quot;Is it the repayment amount, the rate, or the commitment itself that's making you unsure?&quot;,note:&quot;Forces them to name the real blocker. Then address THAT specifically.&quot;}
+]},
+{trigger:&quot;I don't want to pay a broker fee&quot;,tier:&quot;⚡&quot;,tone:&quot;Direct. No apology for the fee — frame it as value.&quot;,
+steps:[
+{say:&quot;I get it. Here's the thing though — if you go direct to a lender, you're locked into one option and whatever rate they give you is what you get.&quot;,they:&quot;Right&quot;},
+{say:&quot;I'm across 30+ lenders. I know which ones will approve your file and which won't. And I protect your credit by only submitting once to the right one. The fee pays for itself in not getting declined and not wasting your time.&quot;,note:&quot;Pause. Then:&quot;},
+{say:&quot;If I can't save you more than the fee costs, I'll tell you straight.&quot;,note:&quot;This line builds massive trust.&quot;}
+]},
+{trigger:&quot;I want to go direct to the bank&quot;,tier:&quot;⚡&quot;,tone:&quot;Not combative. Acknowledge the option, then highlight the risk.&quot;,
+steps:[
+{say:&quot;You absolutely can. The risk is the bank only has one product. If your file doesn't fit their box they decline you — that's a mark on your credit — and the next lender sees that and gets cautious.&quot;,they:&quot;I didn't think of that&quot;},
+{say:&quot;I place it with the lender that actually fits, first time. No trial and error on your file.&quot;,note:&quot;Credit file protection is your strongest angle here.&quot;}
+]},
+// ═══ TIER 3: OCCASIONAL ═══
+{trigger:&quot;I want to wait until I've saved more deposit&quot;,tier:&quot;💡&quot;,tone:&quot;Curious. Don't argue — reframe the cost of waiting.&quot;,
+steps:[
+{say:&quot;I hear you. Can I ask though — what's the car situation costing you right now while you wait? Repairs, unreliability, time off work?&quot;,they:&quot;Yeah it's costing me / Not much really&quot;,note:&quot;If it IS costing them, the reframe writes itself.&quot;},
+{say:&quot;Sometimes the cost of waiting is more than the deposit you'd save. Let's run the numbers both ways and see which actually makes more sense.&quot;,note:&quot;Data beats opinions. Show them the maths.&quot;}
+]},
+{trigger:&quot;I'll just use my credit card / Afterpay&quot;,tier:&quot;💡&quot;,tone:&quot;Matter of fact. Let the maths do the talking.&quot;,
+steps:[
+{say:&quot;You can, but let's do the maths. Credit card interest is usually 18 to 22 percent. What I'm quoting you is [X]. Over 12 months the difference is about [$X] you'd save.&quot;,they:&quot;Oh really?&quot;},
+{say:&quot;And Afterpay still shows on your credit file as a liability — lenders see it the same way.&quot;,note:&quot;Most people don't know this. It lands hard.&quot;}
+]},
+{trigger:&quot;The term is too long&quot;,tier:&quot;💡&quot;,tone:&quot;Flexible. Give them control.&quot;,
+steps:[
+{say:&quot;Totally get that. The term's flexible. We can shorten it — your repayments go up a bit but you pay way less interest overall. Or we lock in the longer term but you make extra payments when you can, no penalty.&quot;,they:&quot;Hmm&quot;},
+{say:&quot;Which feels better to you?&quot;,note:&quot;Two options, they choose. Feels like their decision.&quot;}
+]},
+{trigger:&quot;My accountant needs to look at it first&quot;,tier:&quot;💡&quot;,tone:&quot;Supportive. Don't fight this — become the accountant's best friend.&quot;,
+steps:[
+{say:&quot;100%, I'd expect that. I'll put together a full breakdown — rate, term, total cost, repayment structure — so your accountant has everything they need in one hit.&quot;,they:&quot;That'd be great&quot;},
+{say:&quot;When are you seeing them next? I'll make sure it's in their hands before then.&quot;,note:&quot;You're now driving the timeline, not waiting for it.&quot;}
+]},
+{trigger:&quot;Business is a bit slow right now&quot;,tier:&quot;💡&quot;,tone:&quot;Diagnostic. Not pushy — genuinely curious.&quot;,
+steps:[
+{say:&quot;Can I ask — is the business slow because you're missing opportunities you can't fund, or is it genuinely quiet across the board?&quot;,they:&quot;Missing opportunities / Quiet overall&quot;,note:&quot;If missing opportunities → the finance IS the solution.&quot;},
+{say:&quot;Most of the cashflow deals I place are for exactly this — bridging the gap so the business can keep moving and earn its way out instead of shrinking into it.&quot;,note:&quot;Only use this if they said 'missing opportunities'. If genuinely quiet, don't push.&quot;}
+]},
+{trigger:&quot;I don't want to take on more debt&quot;,tier:&quot;💡&quot;,tone:&quot;Reframe. Not adding — restructuring.&quot;,
+steps:[
+{say:&quot;I respect that. But if we're consolidating, you're not adding debt — you're restructuring what's already there into one repayment that's lower than what you're paying across five different things right now.&quot;,they:&quot;I hadn't thought of it like that&quot;},
+{say:&quot;Net position improves, not worsens. Want me to show you the side by side?&quot;,note:&quot;Visual comparison kills this objection.&quot;}
+]},
+// ═══ TIER 4: RARE BUT NAIL THEM ═══
+{trigger:&quot;I need the money urgently&quot;,tier:&quot;🎯&quot;,tone:&quot;Match their urgency. Move fast.&quot;,
+steps:[
+{say:&quot;How urgent are we talking? Because I've got lenders that can turn around in 24 hours for the right file.&quot;,they:&quot;ASAP / By Friday / etc&quot;},
+{say:&quot;If your docs are ready to go today I can have you submitted by this arvo. What's the deadline we're working to?&quot;,note:&quot;Not an objection — it's an opportunity. Speed = value here.&quot;}
+]},
+{trigger:&quot;I've heard bad things about brokers&quot;,tier:&quot;🎯&quot;,tone:&quot;Honest. Acknowledge it. Don't get defensive.&quot;,
+steps:[
+{say:&quot;Fair enough, and honestly some of that reputation is earned. That's exactly why I showed you my fee upfront and I'm telling you which lender and why before I submit.&quot;,they:&quot;Okay&quot;},
+{say:&quot;You'll never be in the dark with me. If at any point you're not comfortable, tell me and we stop. No pressure.&quot;,note:&quot;Transparency is the only antidote here. Don't oversell — just be straight.&quot;}
+]},
+{trigger:&quot;Going cold / pulling away&quot;,tier:&quot;🎯&quot;,tone:&quot;Negative reverse. Counterintuitive but powerful.&quot;,
+steps:[
+{say:&quot;Look, I'm getting the feeling this might not be the right time, and that's totally fine. No hard feelings at all.&quot;,they:&quot;No no, it's just... (opens up)&quot;,note:&quot;Giving them permission to leave makes them want to stay. If they DO leave — they were never going to convert anyway. Save your energy.&quot;},
+{say:&quot;Am I reading that right, or is there something specific I can clear up?&quot;,note:&quot;This is a last-resort move. Only use when they've gone genuinely cold — not just slow.&quot;}
+]}
 ];
+
 
 const QUOTE_TABLE=[{amount:10000,weekly:58.89},{amount:15000,weekly:88.34},{amount:20000,weekly:110.25},{amount:25000,weekly:137.81},{amount:30000,weekly:161.60},{amount:35000,weekly:188.48},{amount:40000,weekly:212.96},{amount:50000,weekly:264.32},{amount:60000,weekly:315.67},{amount:70000,weekly:367.03},{amount:80000,weekly:418.39},{amount:90000,weekly:469.74},{amount:100000,weekly:521.10}];
 
@@ -2208,9 +2318,18 @@ return&lt;div key={s.id} className={`dot ${i===cur?&quot;a&quot;:&quot;&quot;} $
 &lt;div style={{width:300,borderLeft:&quot;1px solid #21262d&quot;,overflow:&quot;auto&quot;,padding:14,background:&quot;#0d1117&quot;,animation:&quot;fadeUp .2s ease&quot;,fontSize:12}}&gt;
 {showObj&amp;&amp;(&lt;div&gt;
 &lt;div className=&quot;sl&quot; style={{marginBottom:10,color:&quot;#f47067&quot;}}&gt;Objection Handlers&lt;/div&gt;
-{OBJECTIONS.map((obj,i)=&gt;(&lt;div key={i} className=&quot;oc&quot; style={{marginBottom:6}} onClick={()=&gt;setExpObj(expObj===i?null:i)}&gt;
-&lt;div style={{padding:&quot;8px 12px&quot;,fontFamily:&quot;'DM Sans',sans-serif&quot;,fontSize:12,fontWeight:600,color:&quot;#f47067&quot;,display:&quot;flex&quot;,justifyContent:&quot;space-between&quot;,alignItems:&quot;center&quot;}}&gt;{obj.trigger}&lt;span style={{fontSize:10,color:&quot;#484f58&quot;}}&gt;{expObj===i?&quot;▲&quot;:&quot;▼&quot;}&lt;/span&gt;&lt;/div&gt;
-{expObj===i&amp;&amp;&lt;div style={{padding:&quot;0 12px 12px&quot;,fontFamily:&quot;'DM Sans',sans-serif&quot;}}&gt;&lt;div style={{fontSize:12,color:&quot;#e6edf3&quot;,marginBottom:6,lineHeight:1.5}}&gt;{obj.response}&lt;/div&gt;&lt;div style={{fontSize:11,color:&quot;#3fb950&quot;,fontStyle:&quot;italic&quot;}}&gt;→ {obj.followUp}&lt;/div&gt;&lt;/div&gt;}
+{OBJECTIONS.map((obj,i)=&gt;(&lt;div key={i} className=&quot;oc&quot; style={{marginBottom:8,border:&quot;1px solid #252a38&quot;,borderRadius:8,overflow:&quot;hidden&quot;,borderLeft:obj.tier===&quot;🔥&quot;?&quot;3px solid #f47067&quot;:obj.tier===&quot;⚡&quot;?&quot;3px solid #f0a500&quot;:obj.tier===&quot;💡&quot;?&quot;3px solid #4e8cff&quot;:&quot;3px solid #a855f7&quot;}} onClick={()=&gt;setExpObj(expObj===i?null:i)}&gt;
+&lt;div style={{padding:&quot;10px 14px&quot;,fontFamily:&quot;'DM Sans',sans-serif&quot;,fontSize:13,fontWeight:600,color:&quot;#e6edf3&quot;,display:&quot;flex&quot;,justifyContent:&quot;space-between&quot;,alignItems:&quot;center&quot;,cursor:&quot;pointer&quot;,background:&quot;rgba(255,255,255,0.02)&quot;}}&gt;&lt;span&gt;{obj.tier} {obj.trigger}&lt;/span&gt;&lt;span style={{fontSize:10,color:&quot;#484f58&quot;}}&gt;{expObj===i?&quot;▲&quot;:&quot;▼&quot;}&lt;/span&gt;&lt;/div&gt;
+{expObj===i&amp;&amp;&lt;div style={{padding:&quot;10px 14px&quot;,fontFamily:&quot;'DM Sans',sans-serif&quot;,background:&quot;#0d0f15&quot;}}&gt;
+{obj.tone&amp;&amp;&lt;div style={{fontSize:10,color:&quot;#8a90a5&quot;,marginBottom:10,fontStyle:&quot;italic&quot;,textTransform:&quot;uppercase&quot;,letterSpacing:&quot;.3px&quot;}}&gt;🎙️ {obj.tone}&lt;/div&gt;}
+{obj.steps&amp;&amp;obj.steps.map((step,j)=&gt;(&lt;div key={j} style={{marginBottom:j&lt;obj.steps.length-1?12:0}}&gt;
+&lt;div style={{fontSize:12,color:&quot;#e6edf3&quot;,lineHeight:1.6,marginBottom:4}}&gt;
+&lt;span style={{color:&quot;#14b8a6&quot;,fontWeight:700,marginRight:6}}&gt;→&lt;/span&gt;{step.say}
+&lt;/div&gt;
+{step.they&amp;&amp;&lt;div style={{fontSize:11,color:&quot;#3fb950&quot;,paddingLeft:18,marginBottom:2}}&gt;💬 They say: &quot;{step.they}&quot;&lt;/div&gt;}
+{step.note&amp;&amp;&lt;div style={{fontSize:11,color:&quot;#f0a500&quot;,paddingLeft:18,fontStyle:&quot;italic&quot;}}&gt;💡 {step.note}&lt;/div&gt;}
+&lt;/div&gt;))}
+&lt;/div&gt;}
 &lt;/div&gt;))}&lt;/div&gt;)}
 
 {showSum&amp;&amp;(&lt;div&gt;
