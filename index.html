@@ -4327,6 +4327,8 @@ window.addEventListener("DOMContentLoaded", function(){
   setTimeout(function(){
     var g = document.getElementById("gate");
     if (g) g.classList.add("hidden");
+    var s = document.getElementById("appShell");
+    if (s) s.style.display = "flex";
     if (document.body) document.body.classList.remove("locked");
   }, 50);
 });
