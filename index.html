@@ -2438,8 +2438,16 @@ function doExtract(){
   const country=g([/(Australia|New Zealand)/i])||'Australia';
 
   // Citizenship &amp; marital
-  const citizen=g([/Australian Citizen\s*\*?\s*\n?\s*(Citizen|Permanent Resident|Resident|Visa)/i,/Citizenship\s*\n?\s*([^\n]+)/i])||g([/(Citizen|Permanent Resident|Visa)/i])||'Unknown';
-  const marital=g([/Marital Status\s*\*?\s*\n?\s*([^\n]+)/i])||'';
+  // Citizenship — look for the value near explicit citizenship labels, prefer value-before-label Zink format
+  let citizen=g([
+    /(Citizen|Permanent Resident|Resident|Visa)\s*\n\s*Australian Citizen/i,  // Zink: value\nlabel
+    /Australian Citizen\s*\n\s*(Citizen|Permanent Resident|Resident|Visa)/i,   // Alt: label\nvalue
+    /Citizenship\s*\*?\s*\n?\s*(Citizen|Permanent Resident|Resident|Visa)/i   // PDF: Citizenship Citizen
+  ])||'Unknown';
+  const marital=g([
+    /Marital Status\s*\*?\s*\n?\s*(Single|Married|De[ -]?facto|Separated|Divorced|Widowed)/i,  // PDF: label then value
+    /(Single|Married|De[ -]?facto|Separated|Divorced|Widowed)\s*\n\s*Marital Status/i  // Zink: value then label
+  ])||'';
   const dependants=gn([/Number of Dependants[^\n]*?\)[^0-9]*(\d+)/i,/Number of Dependants[^\n]*\n\s*(\d+)/i])||0;
 
   // License — keep type/state/expiry, redact numbers
@@ -2449,11 +2457,22 @@ function doExtract(){
 
   // Employment — KEEP all
   const empType=g([/(Full Time|Part Time|Casual|Self[- ]?Employed|Contract|Permanent|Temporary)\s*\n\s*Type/i,/Type\s*\n?\s*(Full Time|Part Time|Casual|Self[- ]?Employed|Contract)/i])||'';
-  // Handle both &quot;Time Employed: 0 yrs 4 mths&quot; AND separate Years/Months labels
-  const empCombined=raw.match(/Time Employed[\s\S]{0,30}?(\d+)\s*yrs?\s*(\d+)\s*mths?/i);
+  // Scope tenure search to CURRENT EMPLOYMENT section (PDF has values in tabular format)
   let empYears=0,empMonths=0;
-  if(empCombined){empYears=parseInt(empCombined[1])||0;empMonths=parseInt(empCombined[2])||0;}
-  else{empYears=gn([/Years\s*\*?\s*\n?\s*(\d+)/])||0;empMonths=gn([/Months\s*\*?\s*\n?\s*(\d+)/])||0;}
+  const empSection=raw.match(/CURRENT EMPLOYMENT[\s\S]{0,600}?(\d+)\s*yrs?\s*(\d+)\s*mths?/i);
+  if(empSection){empYears=parseInt(empSection[1])||0;empMonths=parseInt(empSection[2])||0;}
+  else{
+    // Fallback: Zink format with Years/Months labels on separate lines near employment
+    const empCombined=raw.match(/Time Employed[\s\S]{0,200}?(\d+)\s*yrs?\s*(\d+)\s*mths?/i);
+    if(empCombined){empYears=parseInt(empCombined[1])||0;empMonths=parseInt(empCombined[2])||0;}
+    else{
+      // Zink structured format
+      const empYrsMatch=raw.match(/Years\s*\*?\s*\n?\s*(\d+)\s*\n\s*Months/i);
+      if(empYrsMatch){empYears=parseInt(empYrsMatch[1])||0;}
+      const empMonMatch=raw.match(/Months\s*\*?\s*\n?\s*(\d+)\s*\n\s*Employer/i);
+      if(empMonMatch){empMonths=parseInt(empMonMatch[1])||0;}
+    }
+  }
   const empTenure=empYears&gt;0?(empYears+'y '+(empMonths||0)+'m'):(empMonths&gt;0?empMonths+'m':'Not captured');
   const occupation=g([/Title\s*\n?\s*([^\n]+)/i])||'';
   const industry=g([/Industry\s*\n?\s*([^\n]+)/i])||'';
@@ -2461,8 +2480,24 @@ function doExtract(){
   const empABN=g([/ABN\s*\n?\s*(\d{11}|\d{2}\s\d{3}\s\d{3}\s\d{3})/i])||'';
 
   // Income — KEEP all
-  const netIncome=gn([/Net Income[^$]*\$\s*\n?\s*([0-9,.]+)/i,/Income[^$]*\$\s*\n?\s*([0-9,.]+)/i]);
-  const incomeFreq=g([/Net Income[\s\S]*?\$[\s\S]*?(Weekly|Fortnightly|Monthly|Annually)/i])||'';
+  // Try multiple patterns in priority order:
+  // 1. Zink: &quot;Net Income (After tax) * $ 1301.12&quot;
+  // 2. PDF: &quot;Salary/Wages $5199.60&quot; (monthly equivalent)
+  // 3. PDF: &quot;Total Income $10182.55 per month&quot;
+  let netIncome=gn([/Net Income[^$]*\$\s*\n?\s*([0-9,.]+)/i]);
+  let incomeSource='';
+  if(netIncome){incomeSource='weekly (Zink Net Income)';}
+  else{
+    const salary=gn([/Salary\/Wages\s*\$\s*([0-9,.]+)/i,/Salary\s*\$\s*([0-9,.]+)/i]);
+    if(salary){netIncome=salary;incomeSource='monthly (PDF Salary/Wages)';}
+  }
+  // Frequency — look within 100 chars of Net Income
+  const freqMatch=raw.match(/Net Income[\s\S]{0,100}?\$[\s\S]{0,30}?(Weekly|Fortnightly|Monthly|Annually)/i)
+                ||raw.match(/([0-9,.]+)\s*(Weekly|Fortnightly|Monthly)\s*\n\s*Frequency/i);
+  let incomeFreq='';
+  if(freqMatch){incomeFreq=freqMatch[freqMatch.length-1];}
+  // Override if we got it from PDF monthly source
+  if(incomeSource.startsWith('monthly')){incomeFreq='Monthly';}
 
   // Living
   let livingType=g([/(Boarded|Boarding|Renting|Rent|Mortgage|Own\w*)\s*\n\s*Ownership/i,/Ownership\s*\*?\s*\n?\s*(Rent|Mortgage|Board\w*|Own\w*|Boarding)/i])||'Unknown';
@@ -2552,8 +2587,12 @@ function doExtract(){
   out+='\n';
 
   out+='INCOME\n';
-  out+='  Net (after tax): '+(netIncome?'$'+netIncome.toLocaleString()+' '+incomeFreq:'Not found')+'\n';
-  if(totalIncMonth)out+='  Monthly Income (calculated): $'+totalIncMonth+'\n';
+  if(netIncome){
+    out+='  Net Income: $'+netIncome.toLocaleString()+(incomeFreq?' '+incomeFreq:'')+(incomeSource?' ('+incomeSource+')':'')+'\n';
+  }else{
+    out+='  Net Income: Not captured\n';
+  }
+  if(totalIncMonth)out+='  Total Monthly Income (calculated): $'+totalIncMonth+' per month\n';
   out+='\n';
 
   out+='LIVING\n';
@@ -2700,6 +2739,10 @@ ABSOLUTELY DO NOT FLAG ANY OF THESE AS RED FLAGS:
 
 HALLUCINATION RULES — READ CAREFULLY:
 - The &quot;FHI / Financial Hardship Information on file&quot; line shows the EXACT value. If it says &quot;NO&quot;, there is NO FHI. DO NOT flag FHI as a red flag. DO NOT mention FHI in the credit snapshot except to confirm &quot;no FHI&quot;. Flagging FHI when the data says NO is a critical error.
+- If Employment Tenure shows a value like &quot;10m&quot; or &quot;0y 10m&quot;, that's the confirmed tenure — REPORT IT, don't say &quot;not captured&quot;.
+- If Income is shown with a source label like &quot;$5,199 Monthly (PDF Salary/Wages)&quot; — that's the CONFIRMED monthly income. Don't say frequency is unclear.
+- If Total Monthly Income is also provided (calculated), treat that as the authoritative monthly figure. Don't flag income as uncertain when it's explicitly stated.
+- Citizenship and Marital Status are SEPARATE fields. If you see &quot;Citizenship: Citizen&quot; and &quot;Marital Status: De-facto&quot;, treat them as separate. Never say &quot;Citizenship: De-facto&quot; — De-facto is NEVER a citizenship status.
 - If the data says &quot;Hardship: No&quot; or doesn't mention hardship — DO NOT say FHI is on file. Only flag FHI if the data explicitly says &quot;Yes&quot;, &quot;Active&quot;, or &quot;FHI Flagged&quot;.
 - If employment tenure shows &quot;4m&quot; or &quot;0y 4m&quot;, the person has 4 MONTHS tenure, not 0 months. Parse the full value.
 - If Living Type is &quot;Unknown&quot; or &quot;Boarding&quot; with an amount, don't say &quot;rent is missing&quot; — the data captured what it captured. Just report what's there.
