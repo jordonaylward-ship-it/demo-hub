@@ -716,14 +716,27 @@ function historyChartsBlock(leads){
 
   function parseAnyDate(s){
     if(!s)return null;
-    const parts=String(s).split(/[\/\-]/);
+    const str=String(s).trim();
+    if(!str)return null;
+    // Try ISO format first (yyyy-mm-dd)
+    const isoMatch=str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(isoMatch){
+      const dt=new Date(parseInt(isoMatch[1]),parseInt(isoMatch[2])-1,parseInt(isoMatch[3]));
+      if(!isNaN(dt))return dt;
+    }
+    // Try Aussie format (dd/mm/yyyy or dd-mm-yyyy)
+    const parts=str.split(/[\/\-]/);
     if(parts.length===3){
       let[d,m,y]=parts.map(x=&gt;parseInt(x));
       if(y&lt;100)y+=2000;
-      const dt=new Date(y,m-1,d);
-      return isNaN(dt)?null:dt;
+      if(y&gt;1900&amp;&amp;y&lt;2100&amp;&amp;m&gt;=1&amp;&amp;m&lt;=12&amp;&amp;d&gt;=1&amp;&amp;d&lt;=31){
+        const dt=new Date(y,m-1,d);
+        if(!isNaN(dt))return dt;
+      }
     }
-    return null;
+    // Final fallback: native Date parsing (handles timestamps, ISO with time, etc.)
+    const fallback=new Date(str);
+    return isNaN(fallback)?null:fallback;
   }
 
   let earliest=null,latest=new Date();
